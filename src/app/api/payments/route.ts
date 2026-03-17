@@ -1,0 +1,212 @@
+
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/firebase";
+import { ref, get, push, set, child, update } from "firebase/database";
+import { getCurrentUser, createAuditLog } from "@/lib/auth";
+import { generateNumber, sanitizeForFirebase } from "@/lib/utils";
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const search = searchParams.get("search") || "";
+    const status = searchParams.get("status") || "";
+    const clientId = searchParams.get("clientId") || "";
+
+    const paymentsRef = ref(db, 'payments');
+    const snapshot = await get(paymentsRef);
+    let payments: any[] = [];
+
+    if (snapshot.exists()) {
+      snapshot.forEach((childSnapshot) => {
+        const p = childSnapshot.val();
+        payments.push({ id: childSnapshot.key, ...p });
+      });
+    }
+
+    // Filter
+    payments = payments.filter(p => !p.deletedAt);
+
+    // Enhance first so we can search on client details
+    let enhancedPayments = await Promise.all(payments.map(async (pay) => {
+      let client = { firstName: "", lastName: "", clientNumber: "", idNumber: "" };
+      let policy = { policyNumber: "", planType: "" };
+      let receivedBy = { firstName: "", lastName: "" };
+
+      if (pay.clientId) {
+        const s = await get(child(ref(db), `clients/${pay.clientId}`));
+        if (s.exists()) client = s.val();
+      }
+      if (pay.policyId) {
+        const s = await get(child(ref(db), `policies/${pay.policyId}`));
+        if (s.exists()) policy = s.val();
+      }
+      if (pay.receivedById) {
+        const s = await get(child(ref(db), `users/${pay.receivedById}`));
+        if (s.exists()) receivedBy = s.val();
+      }
+
+      return {
+        ...pay,
+        client: { firstName: client.firstName, lastName: client.lastName, clientNumber: client.clientNumber, idNumber: client.idNumber },
+        policy: { policyNumber: policy.policyNumber, planType: policy.planType },
+        receivedBy: { firstName: receivedBy.firstName, lastName: receivedBy.lastName }
+      };
+    }));
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      enhancedPayments = enhancedPayments.filter(p =>
+        (p.paymentNumber && p.paymentNumber.toLowerCase().includes(searchLower)) ||
+        (p.receiptNumber && p.receiptNumber.toLowerCase().includes(searchLower)) ||
+        (p.client.firstName && p.client.firstName.toLowerCase().includes(searchLower)) ||
+        (p.client.lastName && p.client.lastName.toLowerCase().includes(searchLower)) ||
+        (p.client.clientNumber && p.client.clientNumber.toLowerCase().includes(searchLower)) ||
+        (p.client.idNumber && p.client.idNumber.toLowerCase().includes(searchLower))
+      );
+    }
+
+    if (status && status !== "all") {
+      enhancedPayments = enhancedPayments.filter(p => p.status === status.toUpperCase());
+    }
+
+    if (clientId) {
+      enhancedPayments = enhancedPayments.filter(p => p.clientId === clientId);
+    }
+
+    // Sort
+    enhancedPayments.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+
+    // Pagination
+    const total = enhancedPayments.length;
+    const startIndex = (page - 1) * limit;
+    const paginatedPayments = enhancedPayments.slice(startIndex, startIndex + limit);
+
+    // Calculate Summary Stats
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+    let todayTotal = 0;
+    let monthTotal = 0;
+    let pendingCount = 0;
+
+    payments.forEach(p => {
+      const pDate = new Date(p.paymentDate);
+      const isToday = p.paymentDate.startsWith(todayStr);
+      const isThisMonth = pDate.getTime() >= monthStart;
+
+      if (isToday) todayTotal += p.amount;
+      if (isThisMonth) monthTotal += p.amount;
+      if (p.status === "PENDING") pendingCount++;
+    });
+
+    // For arrearsCount, we need to check all active policies. 
+    // This could be cached or pre-calculated in a real app.
+    const policiesSnapshot = await get(ref(db, 'policies'));
+    let arrearsCount = 0;
+    if (policiesSnapshot.exists()) {
+      policiesSnapshot.forEach(child => {
+        const pol = child.val();
+        if (!pol.deletedAt && pol.arrearsAmount > 0) {
+          arrearsCount++;
+        }
+      });
+    }
+
+    return NextResponse.json({
+      payments: paginatedPayments,
+      summary: {
+        todayTotal,
+        monthTotal,
+        pendingCount,
+        arrearsCount
+      },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching payments:", error);
+    return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const paymentNumber = generateNumber("PAY");
+    const receiptNumber = body.receiptNumber || generateNumber("REC");
+
+    const payment = {
+      paymentNumber,
+      clientId: body.clientId,
+      policyId: body.policyId,
+      amount: parseFloat(body.amount),
+      paymentDate: new Date(body.paymentDate).toISOString(),
+      paymentMethod: body.paymentMethod,
+      referenceNumber: body.referenceNumber,
+      receiptNumber,
+      receiptDate: new Date().toISOString(),
+      periodStart: body.periodStart ? new Date(body.periodStart).toISOString() : null,
+      periodEnd: body.periodEnd ? new Date(body.periodEnd).toISOString() : null,
+      monthsIncluded: body.monthsIncluded || 1,
+      monthsCovered: body.monthsCovered || "",
+      amountInWords: body.amountInWords || null,
+      status: "CONFIRMED",
+      confirmedAt: new Date().toISOString(),
+      receivedById: user.userId,
+      currency: body.currency || "USD",
+      notes: body.notes || "",
+      createdAt: new Date().toISOString()
+    };
+
+    const paymentsRef = ref(db, 'payments');
+    const newPayRef = push(paymentsRef);
+    await set(newPayRef, sanitizeForFirebase(payment));
+    const paymentId = newPayRef.key;
+
+    // Update policy: lastPaymentDate and arrears deduction
+    const policyRef = child(ref(db), `policies/${body.policyId}`);
+    const policySnap = await get(policyRef);
+
+    if (policySnap.exists()) {
+      const p = policySnap.val();
+      const newArrears = Math.max(0, (p.arrearsAmount || 0) - parseFloat(body.amount));
+      await update(policyRef, {
+        lastPaymentDate: new Date(body.paymentDate).toISOString(),
+        arrearsAmount: newArrears
+      });
+    }
+
+    await createAuditLog(
+      user.userId,
+      "CREATE",
+      "payment",
+      paymentId!,
+      "Payment",
+      null,
+      payment,
+      `Recorded payment ${paymentNumber} of R${body.amount}`
+    );
+
+    return NextResponse.json({ payment: { id: paymentId, ...payment } }, { status: 201 });
+  } catch (error) {
+    console.error("Error creating payment:", error);
+    return NextResponse.json({ error: "Failed to create payment" }, { status: 500 });
+  }
+}

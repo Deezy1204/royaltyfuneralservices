@@ -1,0 +1,726 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & ACCESS CONTROL ====================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  role          String    @default("AGENT") // ADMIN, MANAGER, AGENT, ACCOUNTS, CLAIMS_OFFICER
+  isActive      Boolean   @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  
+  // Relations
+  proposals         Proposal[]
+  alterations       Alteration[]       @relation("AlterationCreatedBy")
+  alterationApprovals Alteration[]     @relation("AlterationApprovedBy")
+  payments          Payment[]
+  claims            Claim[]            @relation("ClaimCreatedBy")
+  claimApprovals    Claim[]            @relation("ClaimApprovedBy")
+  declarations      Declaration[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  loginHistory      LoginHistory[]
+  documents         Document[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  ipAddress String?
+  userAgent String?
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  role        String
+  module      String   // clients, proposals, alterations, payments, claims, reports, users, settings
+  canCreate   Boolean  @default(false)
+  canRead     Boolean  @default(true)
+  canUpdate   Boolean  @default(false)
+  canDelete   Boolean  @default(false)
+  canApprove  Boolean  @default(false)
+  canExport   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([role, module])
+}
+
+// ==================== CLIENT & POLICY MANAGEMENT ====================
+
+model Client {
+  id              String    @id @default(uuid())
+  clientNumber    String    @unique // Auto-generated RFS-YYYYMMDD-XXXX
+  title           String?   // Mr, Mrs, Ms, Dr, etc.
+  firstName       String
+  middleName      String?
+  lastName        String
+  idNumber        String    @unique // National ID
+  dateOfBirth     DateTime
+  gender          String    // Male, Female, Other
+  maritalStatus   String?   // Single, Married, Divorced, Widowed
+  phone           String
+  altPhone        String?
+  email           String?
+  
+  // Address
+  streetAddress   String
+  suburb          String?
+  city            String
+  province        String?
+  postalCode      String?
+  country         String    @default("South Africa")
+  
+  // Employment Info
+  occupation      String?
+  employer        String?
+  employerAddress String?
+  
+  // Bank Details (for claims payout)
+  bankName        String?
+  accountNumber   String?
+  branchCode      String?
+  accountType     String?   // Savings, Cheque
+  
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  policies        Policy[]
+  dependents      Dependent[]
+  proposals       Proposal[]
+  payments        Payment[]
+  claims          Claim[]
+  declarations    Declaration[]
+  documents       Document[]
+
+  @@index([clientNumber])
+  @@index([idNumber])
+  @@index([lastName, firstName])
+}
+
+model Policy {
+  id                String    @id @default(uuid())
+  policyNumber      String    @unique // Auto-generated POL-YYYYMMDD-XXXX
+  clientId          String
+  client            Client    @relation(fields: [clientId], references: [id])
+  
+  // Policy Details
+  policyType        String    // INDIVIDUAL, FAMILY
+  planType          String    // WHITE, GOLD, BLUE, PURPLE
+  coverAmount       Float
+  premiumAmount     Float
+  
+  // Dates
+  inceptionDate     DateTime
+  effectiveDate     DateTime
+  renewalDate       DateTime?
+  expiryDate        DateTime?
+  waitingPeriodEnd  DateTime  // Usually 6 months from inception
+  
+  // Status
+  status            String    @default("PENDING") // PENDING, ACTIVE, LAPSED, CANCELLED, EXPIRED, CLAIMED
+  
+  // Payment Info
+  paymentFrequency  String    @default("MONTHLY") // MONTHLY, QUARTERLY, ANNUALLY
+  paymentMethod     String?   // DEBIT_ORDER, CASH, EFT, CARD
+  debitOrderDay     Int?      // Day of month for debit order
+  
+  // Arrears
+  arrearsAmount     Float     @default(0)
+  lastPaymentDate   DateTime?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+  
+  // Relations
+  proposal          Proposal?
+  dependents        PolicyDependent[]
+  alterations       Alteration[]
+  payments          Payment[]
+  claims            Claim[]
+  riders            Rider[]
+
+  @@index([policyNumber])
+  @@index([clientId])
+  @@index([status])
+}
+
+model Dependent {
+  id              String    @id @default(uuid())
+  clientId        String
+  client          Client    @relation(fields: [clientId], references: [id])
+  
+  firstName       String
+  lastName        String
+  idNumber        String?
+  dateOfBirth     DateTime
+  gender          String
+  relationship    String    // SPOUSE, CHILD, PARENT, SIBLING, EXTENDED
+  
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  policies        PolicyDependent[]
+  claims          Claim[]
+
+  @@index([clientId])
+}
+
+model PolicyDependent {
+  id            String    @id @default(uuid())
+  policyId      String
+  policy        Policy    @relation(fields: [policyId], references: [id])
+  dependentId   String
+  dependent     Dependent @relation(fields: [dependentId], references: [id])
+  
+  coverAmount   Float
+  addedDate     DateTime  @default(now())
+  waitingPeriodEnd DateTime
+  isActive      Boolean   @default(true)
+  removedDate   DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([policyId, dependentId])
+  @@index([policyId])
+  @@index([dependentId])
+}
+
+model Rider {
+  id            String    @id @default(uuid())
+  policyId      String
+  policy        Policy    @relation(fields: [policyId], references: [id])
+  
+  riderType     String    // ACCIDENTAL_DEATH, DISABILITY, REPATRIATION, GROCERY, TOMBSTONE
+  coverAmount   Float
+  premiumAmount Float
+  status        String    @default("ACTIVE") // ACTIVE, CANCELLED
+  effectiveDate DateTime
+  endDate       DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([policyId])
+}
+
+// ==================== PROPOSAL FORM ====================
+
+model Proposal {
+  id              String    @id @default(uuid())
+  proposalNumber  String    @unique // Auto-generated PROP-YYYYMMDD-XXXX
+  
+  clientId        String?
+  client          Client?   @relation(fields: [clientId], references: [id])
+  policyId        String?   @unique
+  policy          Policy?   @relation(fields: [policyId], references: [id])
+  
+  // Agent Info
+  agentId         String
+  agent           User      @relation(fields: [agentId], references: [id])
+  agentCode       String?
+  
+  // Proposed Plan
+  policyType      String    // INDIVIDUAL, FAMILY
+  planType        String    // WHITE, GOLD, BLUE, PURPLE
+  proposedCover   Float
+  proposedPremium Float
+  
+  // Client Info (stored for historical record)
+  clientTitle     String?
+  clientFirstName String
+  clientLastName  String
+  clientIdNumber  String
+  clientDOB       DateTime
+  clientGender    String
+  clientPhone     String
+  clientEmail     String?
+  clientAddress   String
+  clientCity      String
+  clientPostalCode String?
+  
+  // Dependents JSON snapshot
+  dependentsData  String?   // JSON array of dependents
+  
+  // Payment Details
+  paymentFrequency String   @default("MONTHLY")
+  paymentMethod   String?
+  bankName        String?
+  accountNumber   String?
+  branchCode      String?
+  debitOrderDay   Int?
+  
+  // Status
+  status          String    @default("DRAFT") // DRAFT, SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  
+  // Signatures
+  clientSignature String?   // Base64 or file path
+  agentSignature  String?
+  witnessName     String?
+  witnessSignature String?
+  
+  notes           String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  documents       Document[]
+
+  @@index([proposalNumber])
+  @@index([status])
+  @@index([agentId])
+}
+
+// ==================== ALTERATION PROCESS ====================
+
+model Alteration {
+  id                String    @id @default(uuid())
+  alterationNumber  String    @unique // Auto-generated ALT-YYYYMMDD-XXXX
+  
+  policyId          String
+  policy            Policy    @relation(fields: [policyId], references: [id])
+  
+  // Request Details
+  alterationType    String    // UPGRADE, DOWNGRADE, ADD_DEPENDENT, REMOVE_DEPENDENT, ADD_RIDER, REMOVE_RIDER, CHANGE_PAYMENT, CHANGE_DETAILS
+  
+  // Previous Values (JSON)
+  previousValues    String    // JSON snapshot of what's being changed
+  
+  // New Values (JSON)
+  newValues         String    // JSON snapshot of new values
+  
+  // For dependent changes
+  dependentId       String?
+  dependentName     String?
+  
+  // For plan changes
+  previousPlan      String?
+  newPlan           String?
+  previousPremium   Float?
+  newPremium        Float?
+  previousCover     Float?
+  newCover          Float?
+  
+  // Dates
+  requestedDate     DateTime  @default(now())
+  effectiveDate     DateTime?
+  
+  // Waiting Period (for new dependents/upgrades)
+  newWaitingPeriod  Boolean   @default(false)
+  waitingPeriodEnd  DateTime?
+  
+  // Status & Workflow
+  status            String    @default("SUBMITTED") // SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED, APPLIED
+  
+  // Audit
+  createdById       String
+  createdBy         User      @relation("AlterationCreatedBy", fields: [createdById], references: [id])
+  approvedById      String?
+  approvedBy        User?     @relation("AlterationApprovedBy", fields: [approvedById], references: [id])
+  approvedAt        DateTime?
+  appliedAt         DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  
+  notes             String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+  
+  // Relations
+  documents         Document[]
+
+  @@index([alterationNumber])
+  @@index([policyId])
+  @@index([status])
+}
+
+// ==================== PAYMENTS & RENEWALS ====================
+
+model Payment {
+  id              String    @id @default(uuid())
+  paymentNumber   String    @unique // Auto-generated PAY-YYYYMMDD-XXXX
+  
+  clientId        String
+  client          Client    @relation(fields: [clientId], references: [id])
+  policyId        String
+  policy          Policy    @relation(fields: [policyId], references: [id])
+  
+  // Payment Details
+  amount          Float
+  paymentDate     DateTime
+  paymentMethod   String    // CASH, EFT, CARD, DEBIT_ORDER, CHEQUE
+  referenceNumber String?
+  
+  // Receipt
+  receiptNumber   String?   @unique
+  receiptDate     DateTime?
+  
+  // Period Covered
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  
+  // Status
+  status          String    @default("PENDING") // PENDING, CONFIRMED, FAILED, REVERSED
+  confirmedAt     DateTime?
+  
+  // Audit
+  receivedById    String
+  receivedBy      User      @relation(fields: [receivedById], references: [id])
+  
+  notes           String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  documents       Document[]
+
+  @@index([paymentNumber])
+  @@index([clientId])
+  @@index([policyId])
+  @@index([paymentDate])
+}
+
+// ==================== CLAIMS PROCESS ====================
+
+model Declaration {
+  id                  String    @id @default(uuid())
+  declarationNumber   String    @unique // Auto-generated DEC-YYYYMMDD-XXXX
+  
+  clientId            String
+  client              Client    @relation(fields: [clientId], references: [id])
+  
+  // Declarant Info
+  declarantName       String
+  declarantIdNumber   String
+  declarantRelation   String    // Relationship to deceased
+  declarantPhone      String
+  declarantAddress    String
+  
+  // Deceased Info
+  deceasedName        String
+  deceasedIdNumber    String
+  deceasedDOB         DateTime
+  deceasedDOD         DateTime  // Date of Death
+  causeOfDeath        String
+  placeOfDeath        String
+  
+  // Burial Info
+  burialDate          DateTime?
+  burialPlace         String?
+  burialTime          String?
+  
+  // Doctor Info
+  doctorName          String?
+  doctorPracticeNumber String?
+  doctorPhone         String?
+  
+  // Status
+  status              String    @default("SUBMITTED") // SUBMITTED, VERIFIED, LINKED_TO_CLAIM
+  
+  // Audit
+  createdById         String
+  createdBy           User      @relation(fields: [createdById], references: [id])
+  
+  notes               String?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+  
+  // Relations
+  claim               Claim?
+  documents           Document[]
+
+  @@index([declarationNumber])
+  @@index([clientId])
+}
+
+model Claim {
+  id                String    @id @default(uuid())
+  claimNumber       String    @unique // Auto-generated CLM-YYYYMMDD-XXXX
+  
+  clientId          String
+  client            Client    @relation(fields: [clientId], references: [id])
+  policyId          String
+  policy            Policy    @relation(fields: [policyId], references: [id])
+  declarationId     String?   @unique
+  declaration       Declaration? @relation(fields: [declarationId], references: [id])
+  
+  // Deceased Info
+  deceasedType      String    // PRINCIPAL, DEPENDENT
+  dependentId       String?
+  dependent         Dependent? @relation(fields: [dependentId], references: [id])
+  deceasedName      String
+  deceasedIdNumber  String
+  dateOfDeath       DateTime
+  causeOfDeath      String
+  
+  // Claim Details
+  claimType         String    // DEATH, FUNERAL, REPATRIATION
+  claimAmount       Float
+  approvedAmount    Float?
+  
+  // Eligibility Check Results (JSON)
+  eligibilityCheck  String?   // JSON with validation results
+  
+  // Beneficiary
+  beneficiaryName   String
+  beneficiaryIdNumber String
+  beneficiaryRelation String
+  beneficiaryPhone  String
+  beneficiaryBank   String?
+  beneficiaryAccount String?
+  beneficiaryBranch String?
+  
+  // Status & Workflow
+  status            String    @default("PENDING") // PENDING, UNDER_REVIEW, DOCUMENTS_REQUIRED, APPROVED, REJECTED, PAID, COMPLETED
+  
+  // Dates
+  submittedAt       DateTime  @default(now())
+  reviewStartedAt   DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  paidAt            DateTime?
+  completedAt       DateTime?
+  
+  rejectionReason   String?
+  
+  // Audit
+  createdById       String
+  createdBy         User      @relation("ClaimCreatedBy", fields: [createdById], references: [id])
+  approvedById      String?
+  approvedBy        User?     @relation("ClaimApprovedBy", fields: [approvedById], references: [id])
+  
+  notes             String?
+  internalNotes     String?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+  
+  // Relations
+  services          ServiceRendered[]
+  documents         Document[]
+
+  @@index([claimNumber])
+  @@index([clientId])
+  @@index([policyId])
+  @@index([status])
+}
+
+model ServiceRendered {
+  id            String    @id @default(uuid())
+  claimId       String
+  claim         Claim     @relation(fields: [claimId], references: [id])
+  
+  serviceType   String    // BODY_REMOVAL, HEARSE, MORTUARY, TRANSPORT, COFFIN, CATERING, TENT, CHAIRS, PROGRAM, FLOWERS, TOMBSTONE, CASH_BENEFIT
+  description   String?
+  provider      String?
+  cost          Float
+  quantity      Int       @default(1)
+  totalCost     Float
+  
+  status        String    @default("PENDING") // PENDING, ARRANGED, DELIVERED, CANCELLED
+  deliveredAt   DateTime?
+  
+  notes         String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([claimId])
+}
+
+// ==================== DOCUMENT MANAGEMENT ====================
+
+model Document {
+  id            String    @id @default(uuid())
+  documentNumber String   @unique // Auto-generated DOC-YYYYMMDD-XXXX
+  
+  // Link to related record
+  clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id])
+  proposalId    String?
+  proposal      Proposal? @relation(fields: [proposalId], references: [id])
+  alterationId  String?
+  alteration    Alteration? @relation(fields: [alterationId], references: [id])
+  paymentId     String?
+  payment       Payment?  @relation(fields: [paymentId], references: [id])
+  declarationId String?
+  declaration   Declaration? @relation(fields: [declarationId], references: [id])
+  claimId       String?
+  claim         Claim?    @relation(fields: [claimId], references: [id])
+  
+  // Document Info
+  documentType  String    // ID_COPY, DEATH_CERTIFICATE, PROPOSAL_FORM, ALTERATION_FORM, RECEIPT, BANK_STATEMENT, PROOF_OF_ADDRESS, CLAIM_FORM, OTHER
+  fileName      String
+  originalName  String
+  mimeType      String
+  fileSize      Int
+  filePath      String
+  
+  description   String?
+  
+  // Audit
+  uploadedById  String
+  uploadedBy    User      @relation(fields: [uploadedById], references: [id])
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@index([clientId])
+  @@index([proposalId])
+  @@index([claimId])
+  @@index([documentType])
+}
+
+// ==================== NOTIFICATIONS & ALERTS ====================
+
+model Notification {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  
+  type        String    // RENEWAL_REMINDER, PENDING_APPROVAL, CLAIM_UPDATE, PAYMENT_DUE, POLICY_LAPSE, WAITING_PERIOD_END
+  title       String
+  message     String
+  link        String?   // URL to related record
+  
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  
+  priority    String    @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  
+  expiresAt   DateTime?
+  
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+}
+
+// ==================== AUDIT LOGGING ====================
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  
+  action      String    // CREATE, UPDATE, DELETE, APPROVE, REJECT, LOGIN, EXPORT
+  module      String    // client, policy, proposal, alteration, payment, claim, user
+  recordId    String?
+  recordType  String?
+  
+  // Change Details
+  previousData String?  // JSON of previous state
+  newData     String?   // JSON of new state
+  
+  ipAddress   String?
+  userAgent   String?
+  
+  description String?
+  
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([module])
+  @@index([recordId])
+  @@index([createdAt])
+}
+
+// ==================== SYSTEM SETTINGS ====================
+
+model SystemSetting {
+  id          String    @id @default(uuid())
+  key         String    @unique
+  value       String
+  description String?
+  category    String    @default("GENERAL") // GENERAL, POLICY, PAYMENT, NOTIFICATION, WORKFLOW
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ==================== PLAN CONFIGURATION ====================
+
+model PlanConfig {
+  id              String    @id @default(uuid())
+  planType        String    @unique // WHITE, GOLD, BLUE, PURPLE
+  displayName     String
+  description     String?
+  
+  // Cover Amounts
+  principalCover  Float
+  spouseCover     Float
+  childCover      Float
+  parentCover     Float
+  extendedCover   Float
+  
+  // Premiums
+  basePremium     Float
+  spousePremium   Float
+  childPremium    Float
+  parentPremium   Float
+  extendedPremium Float
+  
+  // Limits
+  maxDependents   Int       @default(10)
+  maxParents      Int       @default(4)
+  maxExtended     Int       @default(6)
+  
+  // Waiting Periods (in days)
+  naturalDeathWaiting Int   @default(180) // 6 months
+  accidentalDeathWaiting Int @default(0)
+  
+  // Features (JSON)
+  features        String?   // JSON array of included features
+  
+  isActive        Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
