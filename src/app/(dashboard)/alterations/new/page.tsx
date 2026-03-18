@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ const ALTERATION_TYPES = [
 
 const PLAN_OPTIONS = ["WHITE", "GOLD", "BLUE", "PURPLE"];
 
-export default function NewAlterationPage() {
+function NewAlterationContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const clientIdParam = searchParams.get("clientId");
@@ -375,5 +375,13 @@ export default function NewAlterationPage() {
                 </div>
             </form>
         </div>
+    );
+}
+
+export default function NewAlterationPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <NewAlterationContent />
+        </Suspense>
     );
 }

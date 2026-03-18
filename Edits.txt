@@ -4,3 +4,4 @@ Edits and changes
 # The claims number on the dashboard still doesnt read the actual number of claims, it reads 0 when there are claims, fix that
 # Go to the claims and declarations timelines and edit the details it needs to show who did what ie "Declaration submitted by Muzi Malaba"
 # Remove the last two sections on the dashboard the Quick actions and the Items Requiring Attention sections
+# Add the printing feature to the system, it needs to print the policy documents, the claim forms, the declaration forms, and the receipts so that they can be given to the client if they need them

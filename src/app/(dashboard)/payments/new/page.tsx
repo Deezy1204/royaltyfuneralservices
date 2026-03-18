@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ interface Client {
     policies: any[];
 }
 
-export default function NewPaymentPage() {
+function NewPaymentContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const clientIdParam = searchParams.get("clientId");
@@ -80,7 +80,9 @@ export default function NewPaymentPage() {
     const [form, setForm] = useState({
         policyId: "",
         paymentDate: new Date().toISOString().split("T")[0],
+        amount: "",
         currency: "ZAR",
+        paymentMethod: "CASH",
         monthsCovered: [] as string[],
         receivedBy: "",
         notes: "",
@@ -312,13 +314,13 @@ export default function NewPaymentPage() {
                         )}
 
                         {/* Policy Selection */}
-                        {selectedClient?.policies?.length > 0 && (
+                        {(selectedClient?.policies?.length || 0) > 0 && (
                             <div className="space-y-1">
                                 <label className="text-sm font-medium">Policy Number</label>
                                 <Select value={form.policyId} onValueChange={v => setForm(p => ({ ...p, policyId: v }))}>
                                     <SelectTrigger><SelectValue placeholder="Select policy" /></SelectTrigger>
                                     <SelectContent>
-                                        {selectedClient.policies.map(pol => (
+                                        {selectedClient?.policies?.map(pol => (
                                             <SelectItem key={pol.id} value={pol.id}>
                                                 {pol.policyNumber} – {pol.planType} Plan
                                             </SelectItem>
@@ -455,5 +457,13 @@ export default function NewPaymentPage() {
                 </div>
             </form>
         </div>
+    );
+}
+
+export default function NewPaymentPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <NewPaymentContent />
+        </Suspense>
     );
 }

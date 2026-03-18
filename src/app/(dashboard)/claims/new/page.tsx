@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -68,7 +68,7 @@ const SERVICES_LIST = [
     { id: "cashInLeau", label: "Cash-in-leau" },
 ];
 
-export default function NewClaimPage() {
+function NewClaimContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const clientIdParam = searchParams.get("clientId");
@@ -877,5 +877,13 @@ export default function NewClaimPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function NewClaimPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <NewClaimContent />
+        </Suspense>
     );
 }
