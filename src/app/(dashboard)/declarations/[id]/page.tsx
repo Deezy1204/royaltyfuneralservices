@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactElement } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link"; // Added Link import
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 // Define STATUS_ICONS if needed, otherwise remove its usage.
 // For now, I'll define a basic one to avoid errors, but it's not in the original code.
-const STATUS_ICONS: Record<string, JSX.Element> = {
+const STATUS_ICONS: Record<string, ReactElement> = {
     PENDING: <Clock className="w-3 h-3 mr-1" />,
     APPROVED: <CheckCircle2 className="w-3 h-3 mr-1" />,
     REJECTED: <XCircle className="w-3 h-3 mr-1" />,
@@ -126,7 +126,7 @@ export default function DeclarationDetailsPage() {
         }
     };
 
-    const isAdmin = userRole === "ADMIN";
+    const isAdmin = userRole === "ADMIN" || userRole === "DIRECTOR";
     const statusLabel = declaration.status
         ? declaration.status.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
         : "Pending";
