@@ -6,7 +6,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, User, FileCheck, FileSignature, Calendar, MapPin, Stethoscope, Briefcase, FileText } from "lucide-react";
+import {
+    ArrowLeft, CheckCircle2, XCircle, Clock, FileText, User,
+    Calendar, FileDigit, Building, Printer, FileCheck, MapPin, FileSignature
+} from "lucide-react";
 import { formatDate, formatCurrency, STATUS_COLORS, PLAN_COLORS } from "@/lib/utils";
 
 export default function ClaimDetailsPage() {
@@ -55,71 +58,97 @@ export default function ClaimDetailsPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="max-w-4xl mx-auto space-y-6 pb-10 print:max-w-none print:m-0 print:p-0">
+            {/* Header */}
+            <div className="flex items-center justify-between print:hidden">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
+                    <Link href="/claims">
+                        <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
+                    </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            Claim #{claim.claimNumber}
-                        </h1>
-                        <p className="text-gray-500">
-                            Submitted on {formatDate(claim.createdAt)}
-                        </p>
+                        <h1 className="text-2xl font-bold text-gray-900">Claim Details</h1>
+                        <p className="text-gray-500">{claim.claimNumber}</p>
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => window.print()}>
+                        <Printer className="mr-2 h-4 w-4" /> Print
+                    </Button>
                     <Badge className={STATUS_COLORS[claim.status] || "bg-gray-100 text-gray-800"}>
                         {claim.status.replace("_", " ")}
                     </Badge>
                 </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <User className="h-5 w-5 text-purple-600" />
-                            Deceased Details
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">Name</p>
-                            <p className="text-base text-gray-900">{claim.deceasedName}</p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm font-medium text-gray-500">Type</p>
-                                <p className="text-base text-gray-900">
-                                    {claim.deceasedType === "PRINCIPAL" ? "Principal Member" : "Dependent"}
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-500">Date of Death</p>
-                                <p className="text-base text-gray-900">{formatDate(claim.dateOfDeath)}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-500">Date of Birth</p>
-                                <p className="text-base text-gray-900">{formatDate(claim.deceasedDOB) || "N/A"}</p>
-                            </div>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">Cause of Death</p>
-                            <p className="text-base text-gray-900">{claim.causeOfDeath || "N/A"}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* Print Only Header */}
+            <div className="hidden print:block mb-8 text-center border-b pb-4">
+                <h1 className="text-3xl font-bold uppercase tracking-wider text-gray-900">Royalty Funeral Services</h1>
+                <h2 className="text-xl font-semibold mt-2 text-gray-800">Claim Receipt / Details</h2>
+                <div className="text-sm text-gray-600 mt-1">Claim Number: {claim.claimNumber}</div>
+            </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FileCheck className="h-5 w-5 text-purple-600" />
-                            Claim Details
-                        </CardTitle>
-                    </CardHeader>
+            <div className="space-y-6 print:space-y-6">
+                <div className="space-y-6 print:space-y-6">
+                    {/* Deceased & Burial Info */}
+                    <Card className="print:break-inside-avoid shadow-sm">
+                        <CardHeader className="bg-slate-50/80 border-b pb-4">
+                            <CardTitle className="flex items-center gap-2 text-lg text-slate-800">
+                                <User className="h-5 w-5 text-purple-600" />
+                                Deceased & Burial Details
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6 pt-6">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Name</p>
+                                    <p className="text-base font-semibold text-gray-900">{claim.deceasedName}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Type</p>
+                                    <p className="text-base font-semibold text-gray-900">
+                                        {claim.deceasedType === "PRINCIPAL" ? "Principal Member" : "Dependent"}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Date of Death</p>
+                                    <p className="text-base font-medium text-gray-900">{formatDate(claim.dateOfDeath)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Date of Birth</p>
+                                    <p className="text-base font-medium text-gray-900">{formatDate(claim.deceasedDOB) || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Cause of Death</p>
+                                    <p className="text-base font-medium text-gray-900">{claim.causeOfDeath || "N/A"}</p>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4 border-t pt-4">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Place of Death</p>
+                                    <p className="text-base text-gray-900">{claim.placeOfDeath || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Burial Place</p>
+                                    <p className="text-base text-gray-900">{claim.burialPlace || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-gray-500">Approx. Distance</p>
+                                    <p className="text-base text-gray-900">{claim.approximateDistance || "N/A"}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Claim Details */}
+                    <Card className="print:break-inside-avoid shadow-sm">
+                        <CardHeader className="bg-slate-50/80 border-b pb-4">
+                            <CardTitle className="flex items-center gap-2 text-lg text-slate-800">
+                                <FileCheck className="h-5 w-5 text-blue-600" />
+                                Claim & Policy Details
+                            </CardTitle>
+                        </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -157,14 +186,15 @@ export default function ClaimDetailsPage() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <User className="h-5 w-5 text-blue-600" />
-                            Declarant Details
+                {/* Declarant Details */}
+                <Card className="print:break-before-page print:mt-10 print:break-inside-avoid shadow-sm">
+                    <CardHeader className="bg-slate-50/80 border-b pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg text-slate-800">
+                            <User className="h-5 w-5 text-amber-600" />
+                            Declarant Information
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 pt-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm font-medium text-gray-500">Name</p>
@@ -189,39 +219,16 @@ export default function ClaimDetailsPage() {
                         </div>
                     </CardContent>
                 </Card>
+            </div>
 
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <MapPin className="h-5 w-5 text-rose-600" />
-                            Burial Details
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                             <div>
-                                <p className="text-sm font-medium text-gray-500">Place of Death</p>
-                                <p className="text-base text-gray-900">{claim.placeOfDeath || "N/A"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-500">Burial Place</p>
-                                <p className="text-base text-gray-900">{claim.burialPlace || "N/A"}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-gray-500">Approx. Distance</p>
-                                <p className="text-base text-gray-900">{claim.approximateDistance || "N/A"}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Calendar className="h-5 w-5 text-amber-600" />
-                            Timeline & Status
-                        </CardTitle>
-                    </CardHeader>
+            {/* Timeline */}
+            <Card className="print:hidden shadow-sm h-fit">
+                <CardHeader className="bg-slate-50/80 border-b pb-4">
+                    <CardTitle className="flex items-center gap-2 text-lg text-slate-800">
+                        <Clock className="h-5 w-5 text-emerald-600" />
+                        Timeline & Status
+                    </CardTitle>
+                </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
                             <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
@@ -233,7 +240,7 @@ export default function ClaimDetailsPage() {
                                         <div className="font-bold text-slate-900">Created</div>
                                         <time className="font-caveat font-medium text-indigo-500 text-xs">{claim.createdAt ? new Date(claim.createdAt).toLocaleString() : "N/A"}</time>
                                     </div>
-                                    <div className="text-slate-500 text-sm">Claim submitted by {claim.createdBy?.firstName} {claim.createdBy?.lastName}</div>
+                                    <div className="text-slate-500 text-sm">Claim submitted by {claim.declarantName || "Client"}</div>
                                 </div>
                             </div>
                             {claim.reviewStartedAt && (
@@ -314,6 +321,27 @@ export default function ClaimDetailsPage() {
                         </CardContent>
                     </Card>
                 )}
+            </div>
+            
+            {/* Print Footer */}
+            <div className="hidden print:block mt-12 pt-8 border-t border-gray-300">
+                <div className="grid grid-cols-2 gap-8 text-sm">
+                    <div>
+                        <div className="font-semibold mb-6">Submitted By:</div>
+                        <div className="border-b border-gray-400 w-48 mb-2"></div>
+                        <div className="text-gray-600">{claim.declarantName}</div>
+                        <div className="text-gray-500 text-xs mt-1">Date: __________________</div>
+                    </div>
+                    <div>
+                        <div className="font-semibold mb-6">Processed By (Admin):</div>
+                        <div className="border-b border-gray-400 w-48 mb-2"></div>
+                        <div className="text-gray-600">{claim.approvedBy?.firstName} {claim.approvedBy?.lastName}</div>
+                        <div className="text-gray-500 text-xs mt-1">Date: __________________</div>
+                    </div>
+                </div>
+                <div className="text-center text-xs text-gray-400 mt-12">
+                    Generated by Royalty Funeral Services admin system on {new Date().toLocaleDateString()}.
+                </div>
             </div>
         </div>
     );

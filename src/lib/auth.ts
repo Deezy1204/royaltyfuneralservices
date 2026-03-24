@@ -167,6 +167,7 @@ export async function createAuditLog(
 }
 
 export const ROLES = {
+  DIRECTOR: "DIRECTOR",
   ADMIN: "ADMIN",
   MANAGER: "MANAGER",
   AGENT: "AGENT",
@@ -175,6 +176,16 @@ export const ROLES = {
 } as const;
 
 export const PERMISSIONS: Record<string, Record<string, string[]>> = {
+  DIRECTOR: {
+    clients: ["create", "read", "update", "delete", "approve", "export"],
+    proposals: ["create", "read", "update", "delete", "approve", "export"],
+    alterations: ["create", "read", "update", "delete", "approve", "export"],
+    payments: ["create", "read", "update", "delete", "approve", "export"],
+    claims: ["create", "read", "update", "delete", "approve", "export"],
+    reports: ["read", "export"],
+    users: ["create", "read", "update", "delete"],
+    settings: ["read", "update"],
+  },
   ADMIN: {
     clients: ["create", "read", "update", "delete", "approve", "export"],
     proposals: ["create", "read", "update", "delete", "approve", "export"],

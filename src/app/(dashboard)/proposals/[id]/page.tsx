@@ -125,7 +125,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
                 <div className="flex items-center gap-4">
                     <Link href="/proposals" className="print:hidden">
                         <Button variant="ghost" size="icon">
@@ -165,9 +165,17 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                 </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
+            {/* Print Only Header */}
+            <div className="hidden print:block mb-8 mt-4 text-center border-b pb-6">
+                <h1 className="text-3xl font-bold uppercase tracking-wider text-gray-900">Royalty Funeral Services</h1>
+                <h2 className="text-xl font-semibold mt-2 text-gray-800">Proposal Summary</h2>
+                <div className="text-sm text-gray-600 mt-2">Proposal Number: {proposal.proposalNumber}</div>
+                <div className="text-sm text-gray-500 mt-1">Date: {formatDate(proposal.createdAt)}</div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3 print:grid-cols-1 print:gap-4">
                 {/* Main Info */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-2 space-y-6 print:space-y-4">
                     {/* Client Details */}
                     <Card>
                         <CardHeader>
@@ -264,7 +272,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                 </div>
 
                 {/* Sidebar Info */}
-                <div className="space-y-6">
+                <div className="space-y-6 print:space-y-4">
                     {/* Plan Info */}
                     <Card>
                         <CardHeader>
@@ -294,7 +302,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                     </Card>
 
                     {/* Payment Info */}
-                    <Card>
+                    <Card className="print:break-before-page mt-6">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-lg">
                                 <CreditCard className="h-5 w-5 text-purple-600" />

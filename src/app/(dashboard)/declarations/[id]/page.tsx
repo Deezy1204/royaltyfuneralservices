@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link"; // Added Link import
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, User, FileText, Calendar, CheckCircle, ShieldCheck, ShieldAlert, Clock, FileCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, User, FileText, Calendar, CheckCircle, ShieldCheck, ShieldAlert, Clock, FileCheck, Trash2, Printer, CheckCircle2, XCircle } from "lucide-react"; // Added Printer, CheckCircle2, XCircle
 import { formatDate } from "@/lib/utils";
 import { differenceInDays } from "date-fns";
 
@@ -29,12 +30,23 @@ const STATUS_COLORS: Record<string, string> = {
     UNDER_REVIEW: "bg-blue-100 text-blue-800",
 };
 
+// Define STATUS_ICONS if needed, otherwise remove its usage.
+// For now, I'll define a basic one to avoid errors, but it's not in the original code.
+const STATUS_ICONS: Record<string, JSX.Element> = {
+    PENDING: <Clock className="w-3 h-3 mr-1" />,
+    APPROVED: <CheckCircle2 className="w-3 h-3 mr-1" />,
+    REJECTED: <XCircle className="w-3 h-3 mr-1" />,
+    PAID: <CheckCircle className="w-3 h-3 mr-1" />,
+    UNDER_REVIEW: <Clock className="w-3 h-3 mr-1" />,
+};
+
+
 export default function DeclarationDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const [declaration, setDeclaration] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [updating, setUpdating] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false); // Renamed from 'updating'
     const [userRole, setUserRole] = useState<string>("");
 
     useEffect(() => {
@@ -80,8 +92,8 @@ export default function DeclarationDetailsPage() {
         );
     }
 
-    const handleApproval = async (status: "APPROVED" | "REJECTED") => {
-        setUpdating(true);
+    const handleAction = async (status: "APPROVED" | "REJECTED") => { // Renamed from handleApproval
+        setActionLoading(true); // Renamed from setUpdating
         try {
             const res = await fetch(`/api/declarations/${declaration.id}/approve`, {
                 method: "POST",
@@ -100,7 +112,7 @@ export default function DeclarationDetailsPage() {
         } catch (error) {
             console.error(error);
         } finally {
-            setUpdating(false);
+            setActionLoading(false); // Renamed from setUpdating
         }
     };
 
@@ -120,31 +132,69 @@ export default function DeclarationDetailsPage() {
         : "Pending";
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-10">
-            <div className="flex items-center justify-between">
+        <div className="space-y-6 max-w-5xl mx-auto pb-10 print:max-w-none print:m-0 print:p-0">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
+                    <Link href="/declarations">
+                        <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
+                    </Link>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            Declaration #{declaration.declarationNumber}
-                        </h1>
-                        <p className="text-gray-500">
-                            Submitted on {formatDate(declaration.createdAt)}
-                        </p>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-gray-900">Declaration Details</h1>
+                            <Badge className={STATUS_COLORS[declaration.status] || "bg-gray-100 text-gray-800"}>
+                                {STATUS_ICONS[declaration.status] || <Clock className="w-3 h-3 mr-1" />}
+                                {declaration.status}
+                            </Badge>
+                        </div>
+                        <p className="text-gray-500 mt-1 font-mono text-sm">{declaration.declarationNumber}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Badge className={STATUS_COLORS[declaration.status] || "bg-gray-100 text-gray-800"}>
-                        {statusLabel}
-                    </Badge>
-                    {isAdmin && (
+
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => window.print()}>
+                        <Printer className="mr-2 h-4 w-4" /> Print
+                    </Button>
+                    {isAdmin && ( // Changed user?.role to isAdmin
                         <Button variant="destructive" size="sm" onClick={handleDelete}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                         </Button>
                     )}
+                    {declaration.status === "PENDING" && isAdmin && ( // Changed user?.role to isAdmin
+                        <div className="flex gap-2">
+                            <Button
+                                variant="destructive"
+                                onClick={() => handleAction("REJECTED")}
+                                disabled={actionLoading}
+                            >
+                                <XCircle className="w-4 h-4 mr-2" /> Reject
+                            </Button>
+                            <Button
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => handleAction("APPROVED")}
+                                disabled={actionLoading}
+                            >
+                                <CheckCircle2 className="w-4 h-4 mr-2" /> Approve
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Print Only Header */}
+            <div className="hidden print:block mb-8 text-center border-b pb-4">
+                <h1 className="text-3xl font-bold uppercase tracking-wider text-gray-900">Royalty Funeral Services</h1>
+                <h2 className="text-xl font-semibold mt-2 text-gray-800">Declaration of Death</h2>
+                <div className="flex justify-between items-end mt-4">
+                    <div className="text-sm text-gray-600 text-left">
+                        <strong>Declaration No:</strong> {declaration.declarationNumber}<br/>
+                        <strong>Date:</strong> {formatDate(declaration.createdAt)}
+                    </div>
+                    <Badge className={STATUS_COLORS[declaration.status] || "bg-gray-100 text-gray-800"}>
+                        {declaration.status}
+                    </Badge>
                 </div>
             </div>
 
@@ -228,7 +278,7 @@ export default function DeclarationDetailsPage() {
             </Card>
 
             {/* Declaration Signatures */}
-            <Card className="bg-blue-50/50 border-blue-200">
+            <Card className="bg-blue-50/50 border-blue-200 print:break-before-page">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-blue-900">
                         <FileText className="h-5 w-5 text-blue-600" />
@@ -246,7 +296,7 @@ export default function DeclarationDetailsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
 
                 {/* TIMELINE */}
-                <Card>
+                <Card className="print:hidden"> {/* Added print:hidden */}
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Calendar className="h-5 w-5 text-amber-600" />
@@ -265,7 +315,7 @@ export default function DeclarationDetailsPage() {
                                         <div className="font-bold text-slate-900">Submitted</div>
                                         <time className="font-medium text-indigo-500 text-xs">{declaration.createdAt ? new Date(declaration.createdAt).toLocaleString() : "N/A"}</time>
                                     </div>
-                                    <div className="text-slate-500 text-sm">Declaration submitted</div>
+                                    <div className="text-slate-500 text-sm">Declaration submitted by {declaration.declarantName || "Client"}</div>
                                 </div>
                             </div>
                             {/* Approved */}
@@ -279,7 +329,7 @@ export default function DeclarationDetailsPage() {
                                             <div className="font-bold text-slate-900">Approved</div>
                                             <time className="font-medium text-indigo-500 text-xs">{new Date(declaration.approvedAt).toLocaleString()}</time>
                                         </div>
-                                        <div className="text-slate-500 text-sm">Declaration approved — claim marked as Paid</div>
+                                        <div className="text-slate-500 text-sm">Declaration approved by {declaration.approvedBy?.firstName} {declaration.approvedBy?.lastName} — claim marked as Paid</div>
                                     </div>
                                 </div>
                             )}
@@ -294,7 +344,7 @@ export default function DeclarationDetailsPage() {
                                             <div className="font-bold text-slate-900">Rejected</div>
                                             <time className="font-medium text-indigo-500 text-xs">{new Date(declaration.rejectedAt).toLocaleString()}</time>
                                         </div>
-                                        <div className="text-slate-500 text-sm">Declaration was rejected</div>
+                                        <div className="text-slate-500 text-sm">Declaration rejected by {declaration.rejectedBy?.firstName} {declaration.rejectedBy?.lastName}</div>
                                     </div>
                                 </div>
                             )}
@@ -357,16 +407,16 @@ export default function DeclarationDetailsPage() {
 
                         {isAdmin && (
                             (!declaration.status || declaration.status === "PENDING") ? (
-                                <div className="flex gap-3 pt-4 border-t border-gray-100">
-                                    <Button onClick={() => handleApproval("APPROVED")} disabled={updating} className="bg-green-600 hover:bg-green-700">
-                                        {updating ? "Processing..." : "Approve"}
+                                <div className="flex gap-3 pt-4 border-t border-gray-100 print:hidden"> {/* Added print:hidden */}
+                                    <Button onClick={() => handleAction("APPROVED")} disabled={actionLoading} className="bg-green-600 hover:bg-green-700"> {/* Changed handleApproval to handleAction, updating to actionLoading */}
+                                        {actionLoading ? "Processing..." : "Approve"} {/* Changed updating to actionLoading */}
                                     </Button>
-                                    <Button onClick={() => handleApproval("REJECTED")} disabled={updating} variant="destructive">
-                                        {updating ? "Processing..." : "Reject"}
+                                    <Button onClick={() => handleAction("REJECTED")} disabled={actionLoading} variant="destructive"> {/* Changed handleApproval to handleAction, updating to actionLoading */}
+                                        {actionLoading ? "Processing..." : "Reject"} {/* Changed updating to actionLoading */}
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="pt-4 border-t border-gray-100">
+                                <div className="pt-4 border-t border-gray-100 print:hidden"> {/* Added print:hidden */}
                                     <p className="text-sm font-medium text-gray-500">
                                         Processed and marked as <span className={`font-bold ${declaration.status === "APPROVED" ? "text-green-600" : "text-red-600"}`}>{statusLabel}</span>.
                                     </p>
@@ -375,13 +425,35 @@ export default function DeclarationDetailsPage() {
                         )}
 
                         {!isAdmin && (
-                            <div className="pt-4 border-t border-gray-100">
+                            <div className="pt-4 border-t border-gray-100 print:hidden"> {/* Added print:hidden */}
                                 <p className="text-sm text-gray-400 italic">Only admins can approve or reject declarations.</p>
                             </div>
                         )}
                     </CardContent>
                 </Card>
 
+            </div>
+            
+            {/* Print Footer */}
+            <div className="hidden print:block mt-12 pt-8 border-t border-gray-300">
+                <div className="grid grid-cols-2 gap-8 text-sm">
+                    <div>
+                        <div className="font-semibold mb-6">Declared By:</div>
+                        <div className="border-b border-gray-400 w-48 mb-2"></div>
+                        <div className="text-gray-600">{declaration.declarantName}</div>
+                        <div className="text-gray-500 text-xs mt-1">ID: {declaration.declarantIdNumber}</div>
+                        <div className="text-gray-500 text-xs mt-1">Date: {formatDate(declaration.createdAt)}</div>
+                    </div>
+                    <div>
+                        <div className="font-semibold mb-6">Verified By For Office Use:</div>
+                        <div className="border-b border-gray-400 w-48 mb-2"></div>
+                        <div className="text-gray-600">{declaration.approvedBy ? `${declaration.approvedBy.firstName} ${declaration.approvedBy.lastName}` : "Pending Admin Approval"}</div>
+                        <div className="text-gray-500 text-xs mt-1">Date: {declaration.approvedAt ? formatDate(declaration.approvedAt) : "________________"}</div>
+                    </div>
+                </div>
+                <div className="text-center text-xs text-gray-400 mt-12 pb-4">
+                    Generated by Royalty Funeral Services Admin System
+                </div>
             </div>
         </div>
     );

@@ -42,8 +42,40 @@ export async function GET(
                 }
             }
         }
+        
+        let createdBy: any = null;
+        let approvedBy: any = null;
+        let rejectedBy: any = null;
 
-        return NextResponse.json({ declaration: { id, ...declarationData, client } });
+        if (declarationData.createdById) {
+            const userSnap = await get(child(ref(db), `users/${declarationData.createdById}`));
+            if (userSnap.exists()) {
+                createdBy = userSnap.val();
+            }
+        }
+        if (declarationData.approvedById) {
+            const userSnap = await get(child(ref(db), `users/${declarationData.approvedById}`));
+            if (userSnap.exists()) {
+                approvedBy = userSnap.val();
+            }
+        }
+        if (declarationData.rejectedById) {
+            const userSnap = await get(child(ref(db), `users/${declarationData.rejectedById}`));
+            if (userSnap.exists()) {
+                rejectedBy = userSnap.val();
+            }
+        }
+
+        return NextResponse.json({ 
+            declaration: { 
+                id, 
+                ...declarationData, 
+                client,
+                createdBy,
+                approvedBy,
+                rejectedBy
+            } 
+        });
     } catch (error) {
         console.error("Error fetching declaration:", error);
         return NextResponse.json({ error: "Failed to fetch declaration" }, { status: 500 });
@@ -97,7 +129,7 @@ export async function DELETE(
     try {
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden: Admin only" }, { status: 403 });
+        if (user.role !== "ADMIN" && user.role !== "DIRECTOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
         const { id } = await params;
         const decSnap = await get(child(ref(db), `declarations/${id}`));

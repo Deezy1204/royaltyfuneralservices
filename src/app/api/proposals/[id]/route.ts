@@ -95,7 +95,7 @@ export async function PUT(
       if (body.status === "UNDER_REVIEW") updateData.reviewedAt = new Date().toISOString();
       if (body.status === "REJECTED") {
         // Only ADMINs can reject
-        if (user.role !== "ADMIN") {
+        if (user.role !== "ADMIN" && user.role !== "DIRECTOR") {
           return NextResponse.json({ error: "Only Administrators can reject proposals" }, { status: 403 });
         }
         updateData.rejectedAt = new Date().toISOString();
@@ -105,7 +105,7 @@ export async function PUT(
 
     // Handle approval - ADMIN only
     if (body.status === "APPROVED") {
-      if (user.role !== "ADMIN") {
+      if (user.role !== "ADMIN" && user.role !== "DIRECTOR") {
         return NextResponse.json({ error: "Only Administrators can approve proposals" }, { status: 403 });
       }
       updateData.approvedAt = new Date().toISOString();
@@ -228,7 +228,7 @@ export async function DELETE(
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden: Admin only" }, { status: 403 });
+    if (user.role !== "ADMIN" && user.role !== "DIRECTOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { id } = await params;
     const snap = await get(child(ref(db), `proposals/${id}`));

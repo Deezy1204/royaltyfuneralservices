@@ -25,6 +25,7 @@ interface DashboardStats {
   totalPolicies: number;
   activePolicies: number;
   pendingProposals: number;
+  totalClaims: number;
   pendingClaims: number;
   pendingAlterations: number;
   monthlyRevenue: number;
@@ -40,6 +41,7 @@ const emptyStats: DashboardStats = {
   totalPolicies: 0,
   activePolicies: 0,
   pendingProposals: 0,
+  totalClaims: 0,
   pendingClaims: 0,
   pendingAlterations: 0,
   monthlyRevenue: 0,
@@ -78,13 +80,12 @@ const statCards = [
     isCurrency: true,
   },
   {
-    title: "Claims Paid",
-    key: "claimsPaid" as const,
+    title: "Total Claims",
+    key: "totalClaims" as const,
     icon: FileCheck,
     color: "text-orange-600",
     bgColor: "bg-orange-100",
     href: "/claims",
-    isCurrency: true,
   },
 ];
 
@@ -269,65 +270,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions & Summary */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Pending Summary */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Items Requiring Attention</CardTitle>
-            <CardDescription>Real-time pending counts from the database</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {pendingCards.map((card) => (
-                <Link key={card.title} href={card.href}>
-                  <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 hover:bg-gray-50 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <card.icon className={`h-5 w-5 ${card.color}`} />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{card.title}</p>
-                        <p className="text-lg font-bold text-gray-900">
-                          {card.isCurrency
-                            ? formatCurrency(stats[card.key] as number)
-                            : (stats[card.key] as number)}
-                        </p>
-                      </div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { href: "/clients/new", label: "Register New Client", icon: Users, bg: "bg-blue-50 hover:bg-blue-100", color: "text-blue-700", border: "border-blue-200" },
-              { href: "/proposals/new", label: "Create Proposal", icon: FileText, bg: "bg-purple-50 hover:bg-purple-100", color: "text-purple-700", border: "border-purple-200" },
-              { href: "/payments/new", label: "Record Payment", icon: CreditCard, bg: "bg-green-50 hover:bg-green-100", color: "text-green-700", border: "border-green-200" },
-              { href: "/claims/new", label: "Submit Claim", icon: FileCheck, bg: "bg-orange-50 hover:bg-orange-100", color: "text-orange-700", border: "border-orange-200" },
-              { href: "/alterations/new", label: "Policy Alteration", icon: TrendingUp, bg: "bg-indigo-50 hover:bg-indigo-100", color: "text-indigo-700", border: "border-indigo-200" },
-            ].map(({ href, label, icon: Icon, bg, color, border }) => (
-              <Link key={href} href={href}>
-                <div className={`flex items-center gap-3 rounded-lg border ${border} ${bg} px-4 py-3 transition-all duration-150 hover:shadow-sm cursor-pointer`}>
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-full ${bg} ${color}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <span className={`text-sm font-semibold ${color}`}>{label}</span>
-                  <ArrowRight className="ml-auto h-4 w-4 text-gray-400" />
-                </div>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+        {/* Quick Actions removed */}
     </div>
   );
 }

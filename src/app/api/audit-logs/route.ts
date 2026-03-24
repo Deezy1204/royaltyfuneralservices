@@ -6,8 +6,8 @@ import { getCurrentUser } from "@/lib/auth";
 export async function GET(req: NextRequest) {
     try {
         const user = await getCurrentUser();
-        // Allow only ADMIN to view audit logs
-        if (!user || user.role !== "ADMIN") {
+        // Allow ADMIN and DIRECTOR to view audit logs
+        if (!user || (user.role !== "ADMIN" && user.role !== "DIRECTOR")) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

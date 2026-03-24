@@ -70,19 +70,33 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
-    if (!currentUser || currentUser.role !== "ADMIN") {
+    if (!currentUser || !["ADMIN", "DIRECTOR"].includes(currentUser.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
     const email = body.email.toLowerCase();
 
-    // Check existing
+    // Enforce role creation limits
+    if (currentUser.role === "ADMIN" && (body.role === "DIRECTOR" || body.role === "ADMIN")) {
+      return NextResponse.json({ error: "Insufficient permissions to create Admin or Director accounts" }, { status: 403 });
+    }
+
+    // Check existing (manual scan to avoid index error)
     const usersRef = ref(db, 'users');
-    const emailQuery = query(usersRef, orderByChild('email'), equalTo(email));
-    const snapshot = await get(emailQuery);
+    const snapshot = await get(usersRef);
+    let emailExists = false;
 
     if (snapshot.exists()) {
+      snapshot.forEach(child => {
+        const u = child.val();
+        if (u.email && u.email.toLowerCase() === email) {
+          emailExists = true;
+        }
+      });
+    }
+
+    if (emailExists) {
       return NextResponse.json(
         { error: "A user with this email already exists" },
         { status: 400 }
@@ -90,11 +104,6 @@ export async function POST(request: NextRequest) {
     }
 
     const hashedPassword = await hashPassword(body.password);
-
-    const checkRootQuery = query(usersRef);
-    // Manual scan fallback if index fails in dev
-    // Not needed if the above worked, but let's trust query for now or handle scan locally if needed.
-    // The previous get(emailQuery) is sufficient if rules index it, but locally it works fine usually on small data.
 
     const newUser = {
       email: email,

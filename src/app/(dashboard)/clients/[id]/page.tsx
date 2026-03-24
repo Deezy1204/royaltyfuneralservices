@@ -11,7 +11,7 @@ import { formatDate, formatCurrency, PLAN_COLORS, STATUS_COLORS } from "@/lib/ut
 import { differenceInDays } from "date-fns";
 import {
     ArrowLeft, Edit, FileText, CreditCard, User, Phone, Mail,
-    MapPin, Briefcase, Building2, CreditCard as BankIcon, FileCheck, Clock, Shield
+    MapPin, Briefcase, Building2, CreditCard as BankIcon, FileCheck, Clock, Shield, Printer
 } from "lucide-react";
 
 interface Client {
@@ -132,9 +132,9 @@ export default function ClientDetailPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto pb-10">
+        <div className="space-y-6 max-w-5xl mx-auto pb-10 print:max-w-none print:m-0 print:p-0">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between print:hidden">
                 <div className="flex items-center gap-4">
                     <Link href="/clients">
                         <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
@@ -148,28 +148,33 @@ export default function ClientDetailPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => window.print()}>
+                        <Printer className="mr-2 h-4 w-4" /> Print
+                    </Button>
                     <Badge variant={client.isActive ? "success" : "secondary"}>
                         {client.isActive ? "Active" : "Inactive"}
                     </Badge>
-                    <Link href={`/clients/${id}/edit`}>
-                        <Button variant="outline"><Edit className="mr-2 h-4 w-4" />Edit</Button>
-                    </Link>
-                    {isFullMember && (
-                        <Link href={`/claims/new?clientId=${id}`}>
-                            <Button variant="outline" className="border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100">
-                                <FileCheck className="mr-2 h-4 w-4" /> New Claim
-                            </Button>
-                        </Link>
-                    )}
-                    <Link href={`/payments/new?clientId=${id}`}>
-                        <Button><CreditCard className="mr-2 h-4 w-4" />Record Payment</Button>
+                    <Link href={`/clients/${id}/policy`}>
+                        <Button variant="outline" className="border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100">
+                            <FileText className="mr-2 h-4 w-4" /> Generate Policy
+                        </Button>
                     </Link>
                 </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
+            {/* Print Only Header */}
+            <div className="hidden print:block mb-8 text-center border-b pb-4">
+                <h1 className="text-3xl font-bold uppercase tracking-wider text-gray-900">Royalty Funeral Services</h1>
+                <h2 className="text-xl font-semibold mt-2 text-gray-800">Client Profile</h2>
+                <div className="text-sm text-gray-600 mt-2">
+                    Client: {client.title} {client.firstName} {client.lastName}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">Client Number: {client.clientNumber}</div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2 print:grid-cols-2 print:gap-4">
                 {/* Personal Info */}
-                <Card>
+                <Card className="print:break-inside-avoid shadow-sm">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                             <User className="h-4 w-4 text-purple-600" />Personal Information
@@ -192,7 +197,7 @@ export default function ClientDetailPage() {
                 </Card>
 
                 {/* Contact Info */}
-                <Card>
+                <Card className="print:break-inside-avoid shadow-sm">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                             <Phone className="h-4 w-4 text-blue-600" />Contact Details
@@ -215,7 +220,7 @@ export default function ClientDetailPage() {
 
                 {/* Employment */}
                 {(client.occupation || client.employer) && (
-                    <Card>
+                    <Card className="print:break-inside-avoid shadow-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <Briefcase className="h-4 w-4 text-green-600" />Employment
@@ -238,7 +243,7 @@ export default function ClientDetailPage() {
 
                 {/* Banking */}
                 {client.bankName && (
-                    <Card>
+                    <Card className="print:break-inside-avoid shadow-sm">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <BankIcon className="h-4 w-4 text-orange-600" />Banking Details
@@ -262,7 +267,7 @@ export default function ClientDetailPage() {
             </div>
 
             {/* Policies */}
-            <div className="space-y-4">
+            <div className="space-y-4 print:break-before-page">
                 <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900 border-b pb-2">
                     <Shield className="h-5 w-5 text-purple-600" />
                     Policies ({client.policies.length})
@@ -302,7 +307,7 @@ export default function ClientDetailPage() {
                             </div>
 
                             <CardContent className="p-0">
-                                <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x border-b">
+                                <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x border-b print:block print:border-b-0 print:divide-none">
                                     {/* Financials & Premium */}
                                     <div className="p-4 space-y-3">
                                         <h4 className="text-sm font-bold text-gray-700 uppercase tracking-widest border-b pb-1">Premium Breakdown</h4>
@@ -322,7 +327,7 @@ export default function ClientDetailPage() {
                                     </div>
 
                                     {/* Dependents */}
-                                    <div className="p-4 space-y-3">
+                                    <div className="p-4 space-y-3 print:break-before-page">
                                         <h4 className="text-sm font-bold text-gray-700 uppercase tracking-widest border-b pb-1">Dependents</h4>
                                         {!policy.dependents || Object.keys(policy.dependents).length === 0 ? (
                                             <p className="text-sm text-gray-500 italic">No dependents listed.</p>
@@ -342,7 +347,7 @@ export default function ClientDetailPage() {
                                     </div>
                                 </div>
 
-                                <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x">
+                                <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x print:block print:divide-none">
                                     {/* Beneficiaries */}
                                     <div className="p-4 space-y-3">
                                         <h4 className="text-sm font-bold text-gray-700 uppercase tracking-widest border-b pb-1">Beneficiaries</h4>
@@ -390,7 +395,7 @@ export default function ClientDetailPage() {
 
             {/* Recent Claims */}
             {client.claims.length > 0 && (
-                <Card>
+                <Card className="print:break-inside-avoid shadow-sm">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                             <FileCheck className="h-4 w-4 text-red-500" />Claims ({client.claims.length})
@@ -425,7 +430,7 @@ export default function ClientDetailPage() {
 
             {/* Recent Payments */}
             {client.payments.length > 0 && (
-                <Card>
+                <Card className="print:break-inside-avoid shadow-sm mt-6">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-base">
                             <CreditCard className="h-4 w-4 text-green-600" />Payments ({client.payments.length})

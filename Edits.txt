@@ -1,7 +1,69 @@
 Edits and changes
-# The admin needs to approve the claim before it is processed and marked as paid, also get info from Madube about where the amount paid is recorded and the process on that, how the premiums are handled for a client and their dependents
+# Make sure the number of dependents a client can add from the proposal and from the ateration forms is limited, each client can only have 5 dependents
+# After a claim is paid for a certain client, the policy should be marked if its still active or terminated, if active the policy should be transfered to one of the beneficiaries or dependents through the system by the admin
+# I should be able through the system to track the claims paid and burials by day, by week, by month, by year in a chart (line, bar or graphs), i should be able to go deeper into the details and see for which policies were the claims and burials paid for
+# I should be able to track the most popular payment method made by the clients through a graph which shows the number of clients per payment method
+# The agents get commisions per payment made by the client registered by them, these commisions work this way:
+ - An agent gets 20% on premium paid by their client (client registered under their name)
+ - After a year that agent is registered within the system, their commisions drop from 20% to 10%
+ - If a client for example pays for January, February, March, the agent will get the commisions for January in January,for February in February and for March in March, so they should be a way to trak in a client's payment how many months they paid for and how much in order to calculate the commisions properly
+ - If that agent is removed from the system, the clients under that agent should be automatically transfered to the admin user account
+ SO with the above information provided i should be able to track all that information about the agents, see how many clients are under a certain agent and see their details, see how much an agent should get in commisions this month if their clients have paid, so can you create a smart commisions calculator for the agents and the other information
+ # Add the share button on all the printable forms and policies and documents, this share button should generate the proper pdf's and share them through wahtsapp, email, sms (if possible) etc
+ # When adding proposals the clients must provide their beneficiaries and be able to add or remove them through alterations just like they do the dependents
+# From the generate policy for a client, on the acceptance letter, remove Mr Nhlanhla Sibanda as the Managing Director, this managing director should be changeable from the database through the admin panel settings page
+# For the admin user and the director user, the navigation bar is too long, can you make those navitems to be seven and the remaining put them on the "More" dropdown menu
+# When adding users, i need some sort of feedback for loading, and also add password confirmation
+# Remove the accounts types for Accounts, Claims Oficers, and managers
+# Can you add the proper feedback for errors and success messages
 
-# The claims number on the dashboard still doesnt read the actual number of claims, it reads 0 when there are claims, fix that
-# Go to the claims and declarations timelines and edit the details it needs to show who did what ie "Declaration submitted by Muzi Malaba"
-# Remove the last two sections on the dashboard the Quick actions and the Items Requiring Attention sections
-# Add the printing feature to the system, it needs to print the policy documents, the claim forms, the declaration forms, and the receipts so that they can be given to the client if they need them
+
+ The pricing packages for plans offered by the Royalty are as follows:
+1. Royalty White
+- This is divided into two parts:
+    a. Single life
+        -Single life (1 person) - $6/month
+        -Dependent - $3/month
+    b. Family
+        -Family (5 people) - $10/month
+        -Dependent - $3/month
+
+2. Royalty Gold
+- This is divided into two parts:
+    a. Single life
+        -Single life (1 person) - $8/month
+        -Dependent - $4/month
+    b. Family
+        -Family (5 people) - $12/month
+        -Dependent - $4/month
+        -Royalty 10 (10 people) - $20/month
+        -Royalty 12 (12 people) - $25/month
+
+3. Royalty Blue
+- This is divided into two parts:
+    a. Single life
+        -Single life (1 person) - $12/month
+        -Dependent - $5/month
+    b. Family
+        -Family (5 people) - $15/month 
+        -Dependent - $5/month
+        -Group - $20/month
+
+4. Royalty Purple
+- This is divided into two parts:
+    a. Single life
+        -Single life (1 person) - $15/month
+        -Dependent - $6/month
+    b. Family
+        -Family (5 people) - $20/month 
+        -Dependent - $6/month
+
+Then within these plans, a client can choose to also include these two below (Optional):
+    1. Accidental Death Benefit (Lump-sum)
+        -This is an additional benefit that can be added to any of the plans above.
+        -The cost of this benefit is in 3 options ($5 /month for a $750 benefit, $7.50//month for a $1500 benefit, $10/month for a $2000 benefit)
+    2. Spousal/Principal Member Death Benefit
+        -This is an additional benefit that can be added to any of the plans above.
+        -The cost of this benefit is in 2 options ($5/month for a $300 benefit, $10/month for a $600 benefit)
+
+I need those package plans to be on the database and to be changeable through the admin panel settings page in plan configuration

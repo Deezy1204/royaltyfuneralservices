@@ -53,11 +53,9 @@ interface User {
 }
 
 const ROLES = [
+  { value: "DIRECTOR", label: "Director", color: "bg-indigo-100 text-indigo-800" },
   { value: "ADMIN", label: "Administrator", color: "bg-red-100 text-red-800" },
-  { value: "MANAGER", label: "Manager", color: "bg-purple-100 text-purple-800" },
   { value: "AGENT", label: "Agent", color: "bg-blue-100 text-blue-800" },
-  { value: "ACCOUNTS", label: "Accounts", color: "bg-green-100 text-green-800" },
-  { value: "CLAIMS_OFFICER", label: "Claims Officer", color: "bg-orange-100 text-orange-800" },
 ];
 
 export default function UsersPage() {
@@ -66,7 +64,10 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
-  const isAdmin = currentUser?.role === "ADMIN";
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const isAdminOrDirector = currentUser?.role === "ADMIN" || currentUser?.role === "DIRECTOR";
   const [newUser, setNewUser] = useState({
     email: "",
     firstName: "",
@@ -74,6 +75,7 @@ export default function UsersPage() {
     phone: "",
     role: "AGENT",
     password: "",
+    confirmPassword: "",
   });
 
   useEffect(() => {
@@ -106,6 +108,12 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   const handleCreateUser = async () => {
+    if (newUser.password !== newUser.confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+    
+    setIsCreating(true);
     try {
       const res = await fetch("/api/users", {
         method: "POST",
@@ -121,16 +129,67 @@ export default function UsersPage() {
           phone: "",
           role: "AGENT",
           password: "",
+          confirmPassword: "",
         });
         fetchUsers();
+      } else {
+        const errorData = await res.json();
+        alert(errorData.error || "Failed to create user");
       }
     } catch (error) {
       console.error("Failed to create user:", error);
+      alert("An unexpected error occurred while creating the user.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    try {
+      const res = await fetch(`/api/users/${editingUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: editingUser.firstName,
+          lastName: editingUser.lastName,
+          phone: editingUser.phone,
+          role: editingUser.role,
+          isActive: editingUser.isActive
+        }),
+      });
+      if (res.ok) {
+        setEditDialogOpen(false);
+        setEditingUser(null);
+        fetchUsers();
+      } else {
+         const data = await res.json();
+         alert(data.error || "Failed to update user");
+      }
+    } catch (error) {
+      console.error("Failed to update user:", error);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchUsers();
+      } else {
+         const data = await res.json();
+         alert(data.error || "Failed to delete user");
+      }
+    } catch (error) {
+      console.error("Failed to delete user:", error);
     }
   };
 
   const getRoleConfig = (role: string) => {
-    return ROLES.find((r) => r.value === role) || ROLES[2];
+    return ROLES.find((r) => r.value === role) || ROLES.find((r) => r.value === "AGENT")!;
   };
 
   return (
@@ -140,7 +199,7 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-gray-500">Manage system users and access</p>
         </div>
-        {isAdmin && (
+        {isAdminOrDirector && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -191,7 +250,7 @@ export default function UsersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLES.map((role) => (
+                    {ROLES.filter(r => currentUser?.role === "DIRECTOR" || (r.value !== "ADMIN" && r.value !== "DIRECTOR")).map((role) => (
                       <SelectItem key={role.value} value={role.value}>
                         {role.label}
                       </SelectItem>
@@ -205,17 +264,92 @@ export default function UsersPage() {
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   required
                 />
+                <Input
+                  label="Confirm Password"
+                  type="password"
+                  value={newUser.confirmPassword}
+                  onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                  required
+                />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isCreating}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateUser}>Create User</Button>
+                <Button onClick={handleCreateUser} disabled={isCreating}>
+                  {isCreating ? "Creating..." : "Create User"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         )}
-      </div>
+
+          {/* Edit User Dialog */}
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit User</DialogTitle>
+                <DialogDescription>
+                  Modify user details and roles
+                </DialogDescription>
+              </DialogHeader>
+              {editingUser && (
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="First Name"
+                      value={editingUser.firstName}
+                      onChange={(e) => setEditingUser({ ...editingUser, firstName: e.target.value })}
+                      required
+                    />
+                    <Input
+                      label="Last Name"
+                      value={editingUser.lastName}
+                      onChange={(e) => setEditingUser({ ...editingUser, lastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <Input
+                    label="Phone"
+                    type="tel"
+                    value={editingUser.phone || ""}
+                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                  />
+                  <Select
+                    value={editingUser.role}
+                    onValueChange={(v) => setEditingUser({ ...editingUser, role: v })}
+                  >
+                    <SelectTrigger label="Role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.filter(r => currentUser?.role === "DIRECTOR" || (r.value !== "ADMIN" && r.value !== "DIRECTOR")).map((role) => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <label className="flex items-center space-x-2 text-sm pt-2">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-gray-300"
+                      checked={editingUser.isActive}
+                      onChange={(e) => setEditingUser({...editingUser, isActive: e.target.checked})} 
+                    />
+                    <span>User Account Active</span>
+                  </label>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setEditDialogOpen(false); setEditingUser(null); }}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateUser}>Save Changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
 
       {/* Role Summary */}
       <div className="grid gap-4 md:grid-cols-5">
@@ -273,6 +407,7 @@ export default function UsersPage() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Login</TableHead>
+                  {isAdminOrDirector && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -319,6 +454,30 @@ export default function UsersPage() {
                       <TableCell className="text-gray-500 text-sm">
                         {user.lastLogin ? formatDateTime(user.lastLogin) : "Never"}
                       </TableCell>
+                      {isAdminOrDirector && (
+                        <TableCell className="text-right">
+                          {(currentUser?.role === "DIRECTOR" || (user.role !== "ADMIN" && user.role !== "DIRECTOR")) && (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => { setEditingUser(user); setEditDialogOpen(true); }}
+                                className="mr-2 text-blue-600 hover:text-blue-800"
+                              >
+                                Edit
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                Delete
+                              </Button>
+                            </>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}

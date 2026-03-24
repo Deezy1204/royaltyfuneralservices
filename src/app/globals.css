@@ -2,25 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --purple-primary: #7c3aed;
-  --purple-dark: #5b21b6;
-  --purple-light: #ede9fe;
+@layer base {
+  :root {
+    --background: #fdfbf7; /* Off-white / cream background */
+    --foreground: #1c1917; /* Dark black/brown for text */
+    --purple-primary: #5B21B6; /* Elegant dark purple */
+    --purple-dark: #4C1D95;
+    --purple-light: #EDE9FE;
+    --muted: #f5f5f4;
+    --muted-foreground: #78716c;
+  }
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@layer base {
+  html {
+    scroll-behavior: initial;
+  }
+  
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply font-sans;
+  }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
 }
 
 @keyframes spin {

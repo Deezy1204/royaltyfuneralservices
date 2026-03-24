@@ -89,7 +89,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <ul className="space-y-1">
               {navigation.map((item) => {
                 // Conditional rendering for admin-only items
-                if ((item.name === "Settings" || item.name === "Users" || item.name === "Audit Logs") && user?.role !== "ADMIN") {
+                if ((item.name === "Settings" || item.name === "Users" || item.name === "Audit Logs") && user?.role !== "ADMIN" && user?.role !== "DIRECTOR") {
                   return null;
                 }
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");

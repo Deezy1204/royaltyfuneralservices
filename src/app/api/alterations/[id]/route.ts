@@ -82,7 +82,7 @@ export async function PATCH(
 ) {
     try {
         const user = await getCurrentUser();
-        if (!user || user.role !== "ADMIN") {
+        if (!user || (user.role !== "ADMIN" && user.role !== "DIRECTOR")) {
             return NextResponse.json({ error: "Unauthorized. Admin access required." }, { status: 401 });
         }
 
@@ -196,7 +196,7 @@ export async function DELETE(
     try {
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden: Admin only" }, { status: 403 });
+        if (user.role !== "ADMIN" && user.role !== "DIRECTOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
         const { id } = await params;
         const snap = await get(child(ref(db), `alterations/${id}`));

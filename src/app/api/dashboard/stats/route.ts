@@ -73,12 +73,14 @@ export async function GET() {
       });
     }
 
+    let totalClaims = 0;
     let pendingClaims = 0;
     let claimsPaidSum = 0;
     if (claimsSnap.exists()) {
       claimsSnap.forEach(c => {
         const val = c.val();
         if (!val.deletedAt) {
+          totalClaims++;
           if (["PENDING", "UNDER_REVIEW"].includes(val.status)) {
             pendingClaims++;
           }
@@ -123,6 +125,7 @@ export async function GET() {
       totalPolicies,
       activePolicies,
       pendingProposals,
+      totalClaims,
       pendingClaims,
       pendingAlterations,
       monthlyRevenue,
