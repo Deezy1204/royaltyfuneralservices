@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,48 +16,95 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { Building2, Save, Shield, Bell, FileText, CreditCard } from "lucide-react";
 
-const planConfigs = [
-  {
-    plan: "WHITE",
-    name: "White Plan",
-    basePremium: 150,
+import { toast } from "sonner";
+
+const DEFAULT_PLANS = {
+  WHITE: {
+    name: "Royalty White",
     cover: 15000,
-    spousePremium: 75,
-    childPremium: 35,
-    parentPremium: 60,
+    dependentPremium: 3,
+    options: [
+      { id: "white_single", name: "Single life (1 person)", premium: 6, maxPeople: 1 },
+      { id: "white_family", name: "Family (5 people)", premium: 10, maxPeople: 5 }
+    ]
   },
-  {
-    plan: "GOLD",
-    name: "Gold Plan",
-    basePremium: 250,
+  GOLD: {
+    name: "Royalty Gold",
     cover: 25000,
-    spousePremium: 100,
-    childPremium: 50,
-    parentPremium: 80,
+    dependentPremium: 4,
+    options: [
+      { id: "gold_single", name: "Single life (1 person)", premium: 8, maxPeople: 1 },
+      { id: "gold_family", name: "Family (5 people)", premium: 12, maxPeople: 5 },
+      { id: "gold_royalty10", name: "Royalty 10 (10 people)", premium: 20, maxPeople: 10 },
+      { id: "gold_royalty12", name: "Royalty 12 (12 people)", premium: 25, maxPeople: 12 }
+    ]
   },
-  {
-    plan: "BLUE",
-    name: "Blue Plan",
-    basePremium: 350,
+  BLUE: {
+    name: "Royalty Blue",
     cover: 35000,
-    spousePremium: 125,
-    childPremium: 65,
-    parentPremium: 100,
+    dependentPremium: 5,
+    options: [
+      { id: "blue_single", name: "Single life (1 person)", premium: 12, maxPeople: 1 },
+      { id: "blue_family", name: "Family (5 people)", premium: 15, maxPeople: 5 },
+      { id: "blue_group", name: "Group", premium: 20, maxPeople: 10 }
+    ]
   },
-  {
-    plan: "PURPLE",
-    name: "Purple Plan",
-    basePremium: 500,
+  PURPLE: {
+    name: "Royalty Purple",
     cover: 50000,
-    spousePremium: 175,
-    childPremium: 85,
-    parentPremium: 140,
+    dependentPremium: 6,
+    options: [
+      { id: "purple_single", name: "Single life (1 person)", premium: 15, maxPeople: 1 },
+      { id: "purple_family", name: "Family (5 people)", premium: 20, maxPeople: 5 }
+    ]
   },
-];
+  OPTIONAL_BENEFITS: {
+    ACCIDENTAL_DEATH: [
+      { id: "adb_750", cover: 750, premium: 5 },
+      { id: "adb_1500", cover: 1500, premium: 7.5 },
+      { id: "adb_2000", cover: 2000, premium: 10 }
+    ],
+    SPOUSAL_DEATH: [
+      { id: "sdb_300", cover: 300, premium: 5 },
+      { id: "sdb_600", cover: 600, premium: 10 }
+    ]
+  }
+};
 
 export default function SettingsPage() {
   const [companyName, setCompanyName] = useState("Royalty Funeral Services");
   const [saving, setSaving] = useState(false);
+  const [plans, setPlans] = useState<any>(null);
+
+  useEffect(() => {
+    fetch("/api/plans")
+        .then(res => res.json())
+        .then(data => {
+            if (!data.plans || Object.keys(data.plans).length === 0) {
+                setPlans(DEFAULT_PLANS);
+            } else {
+                setPlans(data.plans);
+            }
+        })
+        .catch(console.error);
+  }, []);
+
+  const handleSavePlans = async () => {
+      setSaving(true);
+      try {
+          const res = await fetch("/api/plans", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(plans),
+          });
+          if (!res.ok) throw new Error("Failed to save plans");
+          toast.success("Plan configurations saved successfully");
+      } catch (error) {
+          toast.error("Error saving plans");
+      } finally {
+          setSaving(false);
+      }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -72,361 +119,123 @@ export default function SettingsPage() {
         <p className="text-gray-500">Manage system configuration and preferences</p>
       </div>
 
-      <Tabs defaultValue="company" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="company">Company</TabsTrigger>
-          <TabsTrigger value="plans">Plan Configuration</TabsTrigger>
-          <TabsTrigger value="workflow">Workflow</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="company" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-purple-600" />
-                Company Information
-              </CardTitle>
-              <CardDescription>Basic company details and branding</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Company Name"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                />
-                <Input
-                  label="Registration Number"
-                  defaultValue="2020/123456/07"
-                />
-                <Input
-                  label="VAT Number"
-                  defaultValue="4123456789"
-                />
-                <Input
-                  label="Contact Phone"
-                  defaultValue="011 123 4567"
-                />
-                <Input
-                  label="Contact Email"
-                  defaultValue="info@royaltyfuneral.co.za"
-                />
-                <Input
-                  label="Website"
-                  defaultValue="www.royaltyfuneral.co.za"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Physical Address"
-                  defaultValue="123 Main Road, Johannesburg"
-                />
-                <Input
-                  label="Postal Address"
-                  defaultValue="P.O. Box 1234, Johannesburg, 2000"
-                />
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={handleSave} loading={saving}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="plans" className="space-y-4">
+      <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-purple-600" />
                 Funeral Plan Configuration
               </CardTitle>
-              <CardDescription>Configure plan premiums and cover amounts</CardDescription>
+              <CardDescription>Configure plan structures, options, and premiums</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {planConfigs.map((config) => (
-                  <div key={config.plan} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant={
-                            config.plan === "WHITE"
-                              ? "white"
-                              : config.plan === "GOLD"
-                              ? "gold"
-                              : config.plan === "BLUE"
-                              ? "blue"
-                              : "purple"
-                          }
-                        >
-                          {config.plan}
-                        </Badge>
-                        <span className="font-semibold">{config.name}</span>
+              {!plans ? (
+                  <div className="text-sm text-gray-500">Loading configurations...</div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Base Plans Configuration */}
+                  {["WHITE", "GOLD", "BLUE", "PURPLE"].map((planKey) => {
+                    const planConfig = plans[planKey];
+                    if (!planConfig) return null;
+                    return (
+                      <div key={planKey} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center gap-3 mb-4">
+                          <Badge variant={planKey.toLowerCase() as any}>{planKey}</Badge>
+                          <span className="font-semibold text-lg">{planConfig.name}</span>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-1 mb-6">
+                            <Input 
+                                label="Added Dependent Premium ($)" 
+                                type="number" 
+                                value={planConfig.dependentPremium} 
+                                onChange={(e) => setPlans({...plans, [planKey]: {...planConfig, dependentPremium: Number(e.target.value)}})} 
+                            />
+                        </div>
+                        
+                        <div className="space-y-3">
+                            <h4 className="text-sm font-semibold text-gray-700">Plan Options (Single, Family, etc)</h4>
+                            {planConfig.options.map((opt: any, idx: number) => (
+                                <div key={opt.id} className="grid gap-3 sm:grid-cols-3 bg-white p-3 border rounded">
+                                    <Input 
+                                        label="Option Name" 
+                                        value={opt.name} 
+                                        onChange={(e) => {
+                                            const newOps = [...planConfig.options];
+                                            newOps[idx].name = e.target.value;
+                                            setPlans({...plans, [planKey]: {...planConfig, options: newOps}});
+                                        }} 
+                                    />
+                                    <Input 
+                                        label="Premium ($)" 
+                                        type="number" 
+                                        value={opt.premium} 
+                                        onChange={(e) => {
+                                            const newOps = [...planConfig.options];
+                                            newOps[idx].premium = Number(e.target.value);
+                                            setPlans({...plans, [planKey]: {...planConfig, options: newOps}});
+                                        }} 
+                                    />
+                                    <Input 
+                                        label="Max Covered People" 
+                                        type="number" 
+                                        value={opt.maxPeople} 
+                                        onChange={(e) => {
+                                            const newOps = [...planConfig.options];
+                                            newOps[idx].maxPeople = Number(e.target.value);
+                                            setPlans({...plans, [planKey]: {...planConfig, options: newOps}});
+                                        }} 
+                                    />
+                                </div>
+                            ))}
+                        </div>
                       </div>
-                      <span className="text-lg font-bold text-purple-600">
-                        {formatCurrency(config.basePremium)}/month
-                      </span>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                      <Input
-                        label="Principal Cover"
-                        type="number"
-                        defaultValue={config.cover}
-                      />
-                      <Input
-                        label="Base Premium"
-                        type="number"
-                        defaultValue={config.basePremium}
-                      />
-                      <Input
-                        label="Spouse Premium"
-                        type="number"
-                        defaultValue={config.spousePremium}
-                      />
-                      <Input
-                        label="Child Premium"
-                        type="number"
-                        defaultValue={config.childPremium}
-                      />
-                      <Input
-                        label="Parent Premium"
-                        type="number"
-                        defaultValue={config.parentPremium}
-                      />
-                    </div>
+                    );
+                  })}
+
+                  {/* Optional Benefits Configuration */}
+                  <div className="border rounded-lg p-4 bg-purple-50">
+                      <h3 className="font-semibold text-lg mb-4 text-purple-900">Optional Benefits</h3>
+                      
+                      <div className="space-y-6">
+                          <div>
+                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Accidental Death Benefit (Lump-Sum)</h4>
+                              <div className="grid gap-3 sm:grid-cols-3">
+                                  {plans.OPTIONAL_BENEFITS?.ACCIDENTAL_DEATH?.map((ben: any, idx: number) => (
+                                      <div key={idx} className="bg-white p-3 border rounded space-y-2">
+                                          <p className="text-xs font-medium text-gray-500 uppercase">Tier {idx + 1}</p>
+                                          <Input label="Cover Amount ($)" type="number" value={ben.cover} onChange={(e) => { const n = [...plans.OPTIONAL_BENEFITS.ACCIDENTAL_DEATH]; n[idx].cover = Number(e.target.value); setPlans({...plans, OPTIONAL_BENEFITS: {...plans.OPTIONAL_BENEFITS, ACCIDENTAL_DEATH: n}}); }} />
+                                          <Input label="Premium ($)" type="number" value={ben.premium} onChange={(e) => { const n = [...plans.OPTIONAL_BENEFITS.ACCIDENTAL_DEATH]; n[idx].premium = Number(e.target.value); setPlans({...plans, OPTIONAL_BENEFITS: {...plans.OPTIONAL_BENEFITS, ACCIDENTAL_DEATH: n}}); }} />
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+
+                          <div>
+                              <h4 className="text-sm font-semibold text-gray-700 mb-2">Spousal / Principal Member Death</h4>
+                              <div className="grid gap-3 sm:grid-cols-3">
+                                  {plans.OPTIONAL_BENEFITS?.SPOUSAL_DEATH?.map((ben: any, idx: number) => (
+                                      <div key={idx} className="bg-white p-3 border rounded space-y-2">
+                                          <p className="text-xs font-medium text-gray-500 uppercase">Tier {idx + 1}</p>
+                                          <Input label="Cover Amount ($)" type="number" value={ben.cover} onChange={(e) => { const n = [...plans.OPTIONAL_BENEFITS.SPOUSAL_DEATH]; n[idx].cover = Number(e.target.value); setPlans({...plans, OPTIONAL_BENEFITS: {...plans.OPTIONAL_BENEFITS, SPOUSAL_DEATH: n}}); }} />
+                                          <Input label="Premium ($)" type="number" value={ben.premium} onChange={(e) => { const n = [...plans.OPTIONAL_BENEFITS.SPOUSAL_DEATH]; n[idx].premium = Number(e.target.value); setPlans({...plans, OPTIONAL_BENEFITS: {...plans.OPTIONAL_BENEFITS, SPOUSAL_DEATH: n}}); }} />
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      </div>
                   </div>
-                ))}
-              </div>
+
+                </div>
+              )}
               <div className="flex justify-end mt-6">
-                <Button onClick={handleSave} loading={saving}>
+                <Button onClick={handleSavePlans} loading={saving} disabled={!plans}>
                   <Save className="mr-2 h-4 w-4" />
-                  Save Plan Configuration
+                  Save Plan Configurations
                 </Button>
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Waiting Periods</CardTitle>
-              <CardDescription>Configure claim waiting periods</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Input
-                  label="Natural Death (months)"
-                  type="number"
-                  defaultValue={6}
-                />
-                <Input
-                  label="Accidental Death (months)"
-                  type="number"
-                  defaultValue={0}
-                />
-                <Input
-                  label="New Dependent (months)"
-                  type="number"
-                  defaultValue={6}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="workflow" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-purple-600" />
-                Payment Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Grace Period (days)"
-                  type="number"
-                  defaultValue={30}
-                  helperText="Days before policy lapses due to non-payment"
-                />
-                <Input
-                  label="Renewal Reminder (days)"
-                  type="number"
-                  defaultValue={7}
-                  helperText="Days before renewal to send reminder"
-                />
-                <Select defaultValue="monthly">
-                  <SelectTrigger label="Default Payment Frequency">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="annually">Annually</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select defaultValue="debit_order">
-                  <SelectTrigger label="Preferred Payment Method">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="debit_order">Debit Order</SelectItem>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="eft">EFT</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Approval Workflow</CardTitle>
-              <CardDescription>Configure approval requirements</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select defaultValue="required">
-                  <SelectTrigger label="Proposal Approval">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Auto-approve</SelectItem>
-                    <SelectItem value="required">Manager Approval Required</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select defaultValue="required">
-                  <SelectTrigger label="Alteration Approval">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Auto-approve</SelectItem>
-                    <SelectItem value="required">Manager Approval Required</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select defaultValue="required">
-                  <SelectTrigger label="Claim Approval">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="claims_officer">Claims Officer</SelectItem>
-                    <SelectItem value="required">Manager Approval Required</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-purple-600" />
-                Notification Settings
-              </CardTitle>
-              <CardDescription>Configure when and how notifications are sent</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { label: "Payment Reminders", description: "Notify clients about upcoming payments" },
-                  { label: "Policy Renewals", description: "Alert about policy renewal dates" },
-                  { label: "Claim Updates", description: "Notify about claim status changes" },
-                  { label: "Approval Requests", description: "Alert managers about pending approvals" },
-                  { label: "Waiting Period Completion", description: "Notify when waiting period ends" },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900">{item.label}</p>
-                      <p className="text-sm text-gray-500">{item.description}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge variant="success">Email</Badge>
-                      <Badge variant="secondary">SMS</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="security" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-purple-600" />
-                Security Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Session Timeout (minutes)"
-                  type="number"
-                  defaultValue={30}
-                />
-                <Input
-                  label="Password Expiry (days)"
-                  type="number"
-                  defaultValue={90}
-                />
-                <Input
-                  label="Max Login Attempts"
-                  type="number"
-                  defaultValue={5}
-                />
-                <Input
-                  label="Lockout Duration (minutes)"
-                  type="number"
-                  defaultValue={15}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Backup & Recovery</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Last Backup</p>
-                  <p className="text-sm text-gray-500">12 February 2026, 03:00 AM</p>
-                </div>
-                <Button variant="outline">Backup Now</Button>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select defaultValue="daily">
-                  <SelectTrigger label="Backup Frequency">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hourly">Hourly</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  label="Retention Period (days)"
-                  type="number"
-                  defaultValue={30}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 }

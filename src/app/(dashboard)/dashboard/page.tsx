@@ -13,11 +13,11 @@ import {
   TrendingUp,
   AlertCircle,
   Clock,
-  CheckCircle,
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 interface DashboardStats {
   totalClients: number;
@@ -32,6 +32,7 @@ interface DashboardStats {
   totalArrears: number;
   claimsPaid: number;
   policiesByPlan: { plan: string; count: number }[];
+  paymentsByMethod: { method: string; count: number }[];
 }
 
 
@@ -48,6 +49,14 @@ const emptyStats: DashboardStats = {
   totalArrears: 0,
   claimsPaid: 0,
   policiesByPlan: [],
+  paymentsByMethod: [],
+};
+
+const PAYMENT_METHOD_COLORS: Record<string, string> = {
+  CASH: "#10b981", // Emerald
+  EFT: "#3b82f6", // Blue
+  DEBIT_ORDER: "#8b5cf6", // Violet
+  CARD: "#f59e0b", // Amber
 };
 
 
@@ -266,6 +275,53 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Analytics Row */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Methods Popularity</CardTitle>
+            <CardDescription>Distribution of confirmed payments</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {stats.paymentsByMethod.length > 0 ? (
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stats.paymentsByMethod}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="count"
+                      nameKey="method"
+                      label={({ name, percent }) => `${(name || "").replace("_", " ")} ${(((percent || 0) * 100).toFixed(0))}%`}
+                    >
+                      {stats.paymentsByMethod.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={PAYMENT_METHOD_COLORS[entry.method] || "#94a3b8"} 
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: any) => [value, "Payments"]}
+                      labelFormatter={(label: any) => String(label || "").replace("_", " ")}
+                    />
+                    <Legend formatter={(value) => String(value || "").replace("_", " ")} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+               <div className="h-[300px] flex items-center justify-center text-gray-500 italic">
+                 No payment data available
+               </div>
+            )}
           </CardContent>
         </Card>
       </div>

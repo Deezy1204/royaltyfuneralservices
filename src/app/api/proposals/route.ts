@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
       clientCity: body.clientCity,
       clientPostalCode: body.clientPostalCode,
       dependentsData: body.dependents ? JSON.stringify(body.dependents) : null,
+      beneficiariesData: body.beneficiaries ? JSON.stringify(body.beneficiaries) : null,
       paymentFrequency: body.paymentFrequency,
       paymentMethod: body.paymentMethod,
       bankName: body.bankName,

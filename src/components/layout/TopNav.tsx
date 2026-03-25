@@ -14,6 +14,7 @@ import {
   BarChart3,
   UserCog,
   Settings,
+  Calculator,
   Shield,
   LogOut,
   User,
@@ -44,6 +45,7 @@ const navigationItems = [
   { name: "Payments", href: "/payments", icon: CreditCard },
   { name: "Declarations", href: "/declarations", icon: FileText },
   { name: "Claims", href: "/claims", icon: FileCheck },
+  { name: "Commissions", href: "/commissions", icon: Calculator },
   { name: "Reports", href: "/reports", icon: BarChart3 },
   { name: "Users", href: "/users", icon: UserCog },
   { name: "Settings", href: "/settings", icon: Settings },
@@ -149,33 +151,41 @@ export function TopNav() {
           
           {moreNavItems.length > 0 && (
             <DropdownMenu open={moreOpen} onOpenChange={setMoreOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="text-gray-600 hover:bg-gray-100 font-medium px-3 py-2 ml-1 flex items-center gap-1"
-                  onMouseEnter={() => setMoreOpen(true)}
-                  onMouseLeave={() => setMoreOpen(false)}
-                >
-                  More
-                  <ChevronDown className="h-3.5 w-3.5 mt-0.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                className="w-48"
+              <div 
+                className="flex items-center"
                 onMouseEnter={() => setMoreOpen(true)}
                 onMouseLeave={() => setMoreOpen(false)}
               >
-                {moreNavItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                  return (
-                    <DropdownMenuItem key={item.name} onClick={() => router.push(item.href)}>
-                      <item.icon className={cn("mr-2 h-4 w-4", isActive ? "text-purple-600" : "text-gray-500")} />
-                      <span className={isActive ? "text-purple-700 font-medium" : ""}>{item.name}</span>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "text-gray-600 hover:bg-gray-100 font-medium px-3 py-2 ml-1 flex items-center gap-1 transition-all duration-200",
+                      moreOpen && "bg-gray-100 text-gray-900"
+                    )}
+                  >
+                    More
+                    <ChevronDown className={cn("h-3.5 w-3.5 mt-0.5 transition-transform duration-200", moreOpen && "rotate-180")} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-48"
+                >
+                  {moreNavItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                    return (
+                      <DropdownMenuItem key={item.name} onClick={() => {
+                        router.push(item.href);
+                        setMoreOpen(false);
+                      }}>
+                        <item.icon className={cn("mr-2 h-4 w-4", isActive ? "text-purple-600" : "text-gray-500")} />
+                        <span className={isActive ? "text-purple-700 font-medium" : ""}>{item.name}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </div>
             </DropdownMenu>
           )}
         </nav>

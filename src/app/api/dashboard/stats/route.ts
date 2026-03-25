@@ -15,25 +15,30 @@ export async function GET() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
     // Fetch all needed collections
-    // In efficient real-world, we'd use counters triggering on Cloud Functions.
-    // Here we fetch all.
-
-    const [clientsSnap, policiesSnap, proposalsSnap, claimsSnap, alterationsSnap, paymentsSnap] = await Promise.all([
-      get(ref(db, 'clients')),
-      get(ref(db, 'policies')),
-      get(ref(db, 'proposals')),
-      get(ref(db, 'claims')),
-      get(ref(db, 'alterations')),
-      get(ref(db, 'payments'))
-    ]);
+    // Using individual try-catches or a safer Promise.all
+    let clientsSnap, policiesSnap, proposalsSnap, claimsSnap, alterationsSnap, paymentsSnap;
+    
+    try {
+      [clientsSnap, policiesSnap, proposalsSnap, claimsSnap, alterationsSnap, paymentsSnap] = await Promise.all([
+        get(ref(db, 'clients')),
+        get(ref(db, 'policies')),
+        get(ref(db, 'proposals')),
+        get(ref(db, 'claims')),
+        get(ref(db, 'alterations')),
+        get(ref(db, 'payments'))
+      ]);
+    } catch (dbError) {
+      console.error("Firebase Database Error in stats:", dbError);
+      return NextResponse.json({ error: "Database connection failed" }, { status: 500 });
+    }
 
     let totalClients = 0;
     let activeClients = 0;
 
-    if (clientsSnap.exists()) {
+    if (clientsSnap && clientsSnap.exists()) {
       clientsSnap.forEach(c => {
         const val = c.val();
-        if (!val.deletedAt) {
+        if (val && !val.deletedAt) {
           totalClients++;
           if (val.isActive) activeClients++;
         }
@@ -45,29 +50,28 @@ export async function GET() {
     let policiesWithArrearsSum = 0;
     const policiesByPlanMap: Record<string, number> = {};
 
-    if (policiesSnap.exists()) {
+    if (policiesSnap && policiesSnap.exists()) {
       policiesSnap.forEach(p => {
         const val = p.val();
-        if (!val.deletedAt) {
+        if (val && !val.deletedAt) {
           totalPolicies++;
           if (val.status === "ACTIVE") {
             activePolicies++;
-            // Group by plan
-            const plan = val.planType || "UNKNOWN";
+            const plan = (typeof val.planType === 'string' ? val.planType : "UNKNOWN") || "UNKNOWN";
             policiesByPlanMap[plan] = (policiesByPlanMap[plan] || 0) + 1;
           }
-          if (val.arrearsAmount && val.arrearsAmount > 0) {
-            policiesWithArrearsSum += val.arrearsAmount;
+          if (val.arrearsAmount && Number(val.arrearsAmount) > 0) {
+            policiesWithArrearsSum += Number(val.arrearsAmount);
           }
         }
       });
     }
 
     let pendingProposals = 0;
-    if (proposalsSnap.exists()) {
+    if (proposalsSnap && proposalsSnap.exists()) {
       proposalsSnap.forEach(p => {
         const val = p.val();
-        if (!val.deletedAt && ["DRAFT", "SUBMITTED", "UNDER_REVIEW"].includes(val.status)) {
+        if (val && !val.deletedAt && ["DRAFT", "SUBMITTED", "UNDER_REVIEW"].includes(val.status)) {
           pendingProposals++;
         }
       });
@@ -76,18 +80,18 @@ export async function GET() {
     let totalClaims = 0;
     let pendingClaims = 0;
     let claimsPaidSum = 0;
-    if (claimsSnap.exists()) {
+    if (claimsSnap && claimsSnap.exists()) {
       claimsSnap.forEach(c => {
         const val = c.val();
-        if (!val.deletedAt) {
+        if (val && !val.deletedAt) {
           totalClaims++;
           if (["PENDING", "UNDER_REVIEW"].includes(val.status)) {
             pendingClaims++;
           }
           if (val.status === "PAID" && val.paidAt) {
             const paidDate = new Date(val.paidAt).getTime();
-            if (paidDate >= startOfMonth) {
-              claimsPaidSum += (val.approvedAmount || 0);
+            if (!isNaN(paidDate) && paidDate >= startOfMonth) {
+              claimsPaidSum += (Number(val.approvedAmount) || 0);
             }
           }
         }
@@ -95,29 +99,34 @@ export async function GET() {
     }
 
     let pendingAlterations = 0;
-    if (alterationsSnap.exists()) {
+    if (alterationsSnap && alterationsSnap.exists()) {
       alterationsSnap.forEach(a => {
         const val = a.val();
-        if (!val.deletedAt && ["SUBMITTED", "UNDER_REVIEW"].includes(val.status)) {
+        if (val && !val.deletedAt && ["SUBMITTED", "UNDER_REVIEW"].includes(val.status)) {
           pendingAlterations++;
         }
       });
     }
 
     let monthlyRevenue = 0;
-    if (paymentsSnap.exists()) {
+    const paymentsByMethodMap: Record<string, number> = {};
+
+    if (paymentsSnap && paymentsSnap.exists()) {
       paymentsSnap.forEach(p => {
         const val = p.val();
-        if (!val.deletedAt && val.status === "CONFIRMED" && val.paymentDate) {
+        if (val && !val.deletedAt && val.status === "CONFIRMED" && val.paymentDate) {
+          const method = (typeof val.paymentMethod === 'string' ? val.paymentMethod : "UNKNOWN") || "UNKNOWN";
+          paymentsByMethodMap[method] = (paymentsByMethodMap[method] || 0) + 1;
           const pDate = new Date(val.paymentDate).getTime();
-          if (pDate >= startOfMonth) {
-            monthlyRevenue += (val.amount || 0);
+          if (!isNaN(pDate) && pDate >= startOfMonth) {
+            monthlyRevenue += (Number(val.amount) || 0);
           }
         }
       });
     }
 
     const policiesByPlan = Object.entries(policiesByPlanMap).map(([plan, count]) => ({ plan, count }));
+    const paymentsByMethod = Object.entries(paymentsByMethodMap).map(([method, count]) => ({ method, count }));
 
     const stats = {
       totalClients,
@@ -132,6 +141,7 @@ export async function GET() {
       totalArrears: policiesWithArrearsSum,
       claimsPaid: claimsPaidSum,
       policiesByPlan,
+      paymentsByMethod,
     };
 
     return NextResponse.json(stats);

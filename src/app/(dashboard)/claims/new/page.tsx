@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, ArrowRight, Save, Send, FileText, User, Calendar, MapPin, Stethoscope, AlertCircle, Search, FileCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { SignatureSelector } from "@/components/SignatureSelector";
 
 // Types
 interface DeclarationFormData {
@@ -83,6 +84,8 @@ function NewClaimContent() {
     const [error, setError] = useState("");
     const [declarationId, setDeclarationId] = useState<string | null>(declarationIdParam);
     const [claimId, setClaimId] = useState<string | null>(claimIdParam);
+    const [declarantSignature, setDeclarantSignature] = useState<string | null>(null);
+    const [officerSignature, setOfficerSignature] = useState<string | null>(null);
 
     // Client Search State
     const [clientSearch, setClientSearch] = useState("");
@@ -536,14 +539,24 @@ function NewClaimContent() {
                             <p className="text-gray-700 italic border-l-4 border-blue-400 pl-4 py-2">
                                 I <span className="font-bold underline">{declarationData.declarantName || "______________________________"}</span> of ID No. <span className="font-bold underline">{declarationData.declarantIdNumber || "______________________________"}</span> do hereby declare that all the information provided by me is correct.
                             </p>
-                            <div className="flex items-end justify-between mt-8 border-t border-blue-200 pt-4 px-4 text-sm text-gray-600">
-                                <div className="flex gap-2 items-end">
-                                    <span>Signature:</span>
-                                    <div className="border-b border-gray-400 w-48 h-6"></div>
-                                </div>
-                                <div className="flex gap-2 items-end">
-                                    <span>Date:</span>
-                                    <div className="border-b border-gray-400 w-32 h-6">{new Date().toLocaleDateString()}</div>
+                            <div className="mt-8 space-y-6 bg-white p-6 rounded-lg border border-blue-100">
+                                <SignatureSelector 
+                                    label="Declarant Signature" 
+                                    onSignatureChange={setDeclarantSignature} 
+                                />
+                                <div className="flex items-center justify-between text-sm text-gray-600">
+                                    <div className="flex items-center gap-4">
+                                        <span>Signature:</span>
+                                        {declarantSignature ? (
+                                            <img src={declarantSignature} alt="Signature" className="h-12 object-contain" />
+                                        ) : (
+                                            <div className="border-b border-gray-400 w-48 h-10 flex items-end"></div>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2 items-end">
+                                        <span>Date:</span>
+                                        <div className="border-b border-gray-400 w-32 h-6">{new Date().toLocaleDateString()}</div>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -562,14 +575,24 @@ function NewClaimContent() {
                                 <Input label="Received by:" placeholder="Name of Official" />
                                 <Input label="Designation:" placeholder="Job Title" />
                             </div>
-                            <div className="flex items-end mt-4 text-sm text-gray-600">
-                                <div className="flex gap-2 items-end">
-                                    <span>date & time stamp:</span>
-                                    <div className="border-b border-gray-400 w-48 h-6 flex items-end">{new Date().toLocaleString()}</div>
-                                </div>
-                                <div className="flex gap-2 items-end ml-8">
-                                    <span>signature:</span>
-                                    <div className="border-b border-gray-400 w-48 h-6 flex items-end"></div>
+                            <div className="mt-6 space-y-6 bg-white p-6 rounded-lg border border-gray-200">
+                                <SignatureSelector 
+                                    label="Officer Signature" 
+                                    onSignatureChange={setOfficerSignature} 
+                                />
+                                <div className="flex items-center justify-between text-sm text-gray-600">
+                                    <div className="flex items-center gap-4">
+                                        <span>date & time stamp:</span>
+                                        <div className="border-b border-gray-400 w-48 h-10 flex items-end">{new Date().toLocaleString()}</div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span>signature:</span>
+                                        {officerSignature ? (
+                                            <img src={officerSignature} alt="Officer Signature" className="h-12 object-contain" />
+                                        ) : (
+                                            <div className="border-b border-gray-400 w-48 h-10 flex items-end"></div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -819,14 +842,24 @@ function NewClaimContent() {
                             <p className="text-gray-700 italic border-l-4 border-blue-400 pl-4 py-2">
                                 I <span className="font-bold underline">{declarationData.declarantName || "______________________________"}</span> of ID No. <span className="font-bold underline">{declarationData.declarantIdNumber || "______________________________"}</span> do hereby declare that all the information provided by me is correct.
                             </p>
-                            <div className="flex items-end justify-between mt-8 border-t border-blue-200 pt-4 px-4 text-sm text-gray-600">
-                                <div className="flex gap-2 items-end">
-                                    <span>Signature:</span>
-                                    <div className="border-b border-gray-400 w-48 h-6"></div>
-                                </div>
-                                <div className="flex gap-2 items-end">
-                                    <span>Date:</span>
-                                    <div className="border-b border-gray-400 w-32 h-6">{new Date().toLocaleDateString()}</div>
+                            <div className="mt-8 space-y-6 bg-white p-6 rounded-lg border border-blue-100">
+                                <SignatureSelector 
+                                    label="Declarant Signature" 
+                                    onSignatureChange={setDeclarantSignature} 
+                                />
+                                <div className="flex items-center justify-between text-sm text-gray-600">
+                                    <div className="flex items-center gap-4">
+                                        <span>Signature:</span>
+                                        {declarantSignature ? (
+                                            <img src={declarantSignature} alt="Signature" className="h-12 object-contain" />
+                                        ) : (
+                                            <div className="border-b border-gray-400 w-48 h-10 flex items-end"></div>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2 items-end">
+                                        <span>Date:</span>
+                                        <div className="border-b border-gray-400 w-32 h-6">{new Date().toLocaleDateString()}</div>
+                                    </div>
                                 </div>
                             </div>
                         </CardContent>
@@ -837,26 +870,33 @@ function NewClaimContent() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-gray-900">
                                 <FileCheck className="h-5 w-5 text-gray-600" />
-                                PART D - FOR OFFICIAL USE
+                                PART D— For office use only
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <Input label="Received By" placeholder="Name of Official" />
-                                <Input label="Designation" placeholder="Job Title" />
+                                <Input label="Received by:" placeholder="Name of Official" />
+                                <Input label="Designation:" placeholder="Job Title" />
                             </div>
-                            <div className="flex items-end justify-between mt-8 border-t border-gray-200 pt-4 px-4 text-sm text-gray-600">
-                                <div className="flex gap-2 items-end">
-                                    <span>Signature:</span>
-                                    <div className="border-b border-gray-400 w-48 h-6"></div>
+                            <div className="mt-6 space-y-6 bg-white p-6 rounded-lg border border-gray-200">
+                                <SignatureSelector 
+                                    label="Officer Signature" 
+                                    onSignatureChange={setOfficerSignature} 
+                                />
+                                <div className="flex items-center justify-between text-sm text-gray-600">
+                                    <div className="flex items-center gap-4">
+                                        <span>date & time stamp:</span>
+                                        <div className="border-b border-gray-400 w-48 h-10 flex items-end">{new Date().toLocaleString()}</div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <span>signature:</span>
+                                        {officerSignature ? (
+                                            <img src={officerSignature} alt="Officer Signature" className="h-12 object-contain" />
+                                        ) : (
+                                            <div className="border-b border-gray-400 w-48 h-10 flex items-end"></div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex gap-2 items-end">
-                                    <span>Date & Time:</span>
-                                    <div className="border-b border-gray-400 w-48 h-6 flex items-end">{new Date().toLocaleString()}</div>
-                                </div>
-                            </div>
-                            <div className="mt-6 text-xs text-gray-600 bg-white p-4 border border-gray-200 rounded-md">
-                                <span className="font-bold text-gray-800">Note:</span> Clients should ensure that they stick to the time as per program. When the service is local, the Services Department as guided by the company regulations will only work according to the time stipulated on the program. If the service is to be carried out, out of town the vehicles are required to delay by not more than one hour upon their arrival.
                             </div>
                         </CardContent>
                     </Card>

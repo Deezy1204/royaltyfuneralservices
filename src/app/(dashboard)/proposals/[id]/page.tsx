@@ -20,6 +20,7 @@ import {
     Download
 } from "lucide-react";
 import { formatDate, formatCurrency, STATUS_COLORS, PLAN_COLORS } from "@/lib/utils";
+import { ShareDocumentButton } from "@/components/ui/ShareDocumentButton";
 
 interface Proposal {
     id: string;
@@ -49,6 +50,7 @@ interface Proposal {
     createdAt: string;
     notes?: string;
     dependentsData?: string;
+    beneficiariesData?: string;
     agent?: {
         firstName: string;
         lastName: string;
@@ -122,6 +124,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
     }
 
     const dependents = proposal.dependentsData ? JSON.parse(proposal.dependentsData) : [];
+    const beneficiaries = proposal.beneficiariesData ? JSON.parse(proposal.beneficiariesData) : [];
 
     return (
         <div className="space-y-6">
@@ -147,6 +150,10 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                         <Printer className="mr-2 h-4 w-4" />
                         Print
                     </Button>
+                    <ShareDocumentButton 
+                        title={`Proposal ${proposal.proposalNumber}`} 
+                        text={`Hello ${proposal.clientFirstName},\n\nHere is a link to your Royalty Funeral Services Proposal ${proposal.proposalNumber}.`}
+                    />
                     {proposal.status === "SUBMITTED" && (
                         <Button onClick={() => handleStatusChange("UNDER_REVIEW")}>
                             Start Review
@@ -254,6 +261,44 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                                         ))}
                                     </div>
                                 )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Beneficiaries */}
+                    {beneficiaries.length > 0 && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <Users className="h-5 w-5 text-purple-600" />
+                                    Beneficiaries ({beneficiaries.length})
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="divide-y divide-gray-100">
+                                    {beneficiaries.map((ben: any, idx: number) => (
+                                        <div key={idx} className="py-4 first:pt-0 last:pb-0">
+                                            <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                                                <div>
+                                                    <p className="text-xs text-gray-500 uppercase tracking-wider">Name</p>
+                                                    <p className="font-medium text-gray-900">{ben.firstName} {ben.lastName}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 uppercase tracking-wider">ID Number</p>
+                                                    <p className="text-gray-900">{ben.idNumber || "N/A"}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 uppercase tracking-wider">Relationship</p>
+                                                    <Badge variant="outline" className="mt-1">{ben.relationship}</Badge>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 uppercase tracking-wider">Proportion</p>
+                                                    <p className="font-medium text-purple-700">{ben.proportion}%</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </CardContent>
                         </Card>
                     )}

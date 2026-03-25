@@ -44,6 +44,7 @@ import {
   DollarSign,
   FileSignature,
   Trash2,
+  TrendingUp,
 } from "lucide-react";
 
 interface Claim {
@@ -183,12 +184,20 @@ export default function ClaimsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Claims</h1>
           <p className="text-gray-500">Process and manage funeral claims</p>
         </div>
-        <Link href="/claims/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Claim
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/claims/analytics">
+            <Button variant="outline">
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Analytics
+            </Button>
+          </Link>
+          <Link href="/claims/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Claim
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Summary Cards */}

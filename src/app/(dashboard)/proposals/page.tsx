@@ -216,7 +216,6 @@ export default function ProposalsPage() {
                     <TableHead>Proposal #</TableHead>
                     <TableHead>Client</TableHead>
                     <TableHead>Plan</TableHead>
-                    <TableHead>Cover</TableHead>
                     <TableHead>Premium</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Agent</TableHead>
@@ -246,7 +245,6 @@ export default function ProposalsPage() {
                           <span className="text-xs text-gray-500">{proposal.policyType}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{formatCurrency(proposal.proposedCover)}</TableCell>
                       <TableCell>{formatCurrency(proposal.proposedPremium)}</TableCell>
                       <TableCell>
                         <Badge className={STATUS_COLORS[proposal.status]}>

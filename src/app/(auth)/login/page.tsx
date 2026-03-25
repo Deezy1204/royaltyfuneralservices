@@ -79,9 +79,6 @@ export default function LoginPage() {
               Sign In
             </Button>
           </form>
-          <p className="mt-4 text-center text-xs text-gray-500">
-            Demo credentials: admin@royaltyfuneral.co.za / admin123
-          </p>
         </CardContent>
       </Card>
     </div>

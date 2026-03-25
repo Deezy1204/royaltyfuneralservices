@@ -10,10 +10,15 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const now = new Date();
-        const thisMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
-        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastMonthStr = lastMonth.toISOString().slice(0, 7);
+        const searchParams = request.nextUrl.searchParams;
+        const targetMonth = parseInt(searchParams.get("month") || new Date().getMonth().toString());
+        const targetYear = parseInt(searchParams.get("year") || new Date().getFullYear().toString());
+
+        const targetMonthStr = `${targetYear}-${(targetMonth + 1).toString().padStart(2, '0')}`;
+        
+        // For growth calculation, we still need last month relative to TARGET
+        const prevMonthDate = new Date(targetYear, targetMonth - 1, 1);
+        const prevMonthStr = prevMonthDate.toISOString().slice(0, 7);
 
         // Fetch all necessary data
         const [paymentsSnap, claimsSnap, policiesSnap, usersSnap] = await Promise.all([
@@ -31,8 +36,8 @@ export async function GET(request: NextRequest) {
 
         // Calculations
         let totalRevenue = 0;
-        let lastMonthRevenue = 0;
-        let thisMonthRevenue = 0;
+        let prevMonthRevenue = 0;
+        let targetMonthRevenue = 0;
 
         const monthlyDataMap: Record<string, { revenue: number, claims: number, newPolicies: number }> = {};
 
@@ -44,8 +49,8 @@ export async function GET(request: NextRequest) {
                     totalRevenue += amount;
 
                     const payMonth = (pay.paymentDate || pay.createdAt)?.slice(0, 7);
-                    if (payMonth === thisMonthStr) thisMonthRevenue += amount;
-                    if (payMonth === lastMonthStr) lastMonthRevenue += amount;
+                    if (payMonth === targetMonthStr) targetMonthRevenue += amount;
+                    if (payMonth === prevMonthStr) prevMonthRevenue += amount;
 
                     const formattedMonth = formatMonth(pay.paymentDate || pay.createdAt);
                     if (!monthlyDataMap[formattedMonth]) {
@@ -57,8 +62,8 @@ export async function GET(request: NextRequest) {
         }
 
         let totalClaimsPaid = 0;
-        let lastMonthClaims = 0;
-        let thisMonthClaims = 0;
+        let prevMonthClaims = 0;
+        let targetMonthClaims = 0;
 
         if (claimsSnap.exists()) {
             claimsSnap.forEach((childSnap) => {
@@ -68,8 +73,8 @@ export async function GET(request: NextRequest) {
                     totalClaimsPaid += amount;
 
                     const claimMonth = (claim.updatedAt || claim.createdAt)?.slice(0, 7);
-                    if (claimMonth === thisMonthStr) thisMonthClaims += amount;
-                    if (claimMonth === lastMonthStr) lastMonthClaims += amount;
+                    if (claimMonth === targetMonthStr) targetMonthClaims += amount;
+                    if (claimMonth === prevMonthStr) prevMonthClaims += amount;
 
                     const formattedMonth = formatMonth(claim.updatedAt || claim.createdAt);
                     if (!monthlyDataMap[formattedMonth]) {
@@ -80,9 +85,9 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        let totalPolicies = 0;
-        let newPoliciesThisMonth = 0;
-        let newPoliciesLastMonth = 0;
+        let totalPoliciesCount = 0;
+        let newPoliciesTargetMonth = 0;
+        let newPoliciesPrevMonth = 0;
 
         const planDistributionMap: Record<string, { count: number, revenue: number }> = {};
         const agentStatsMap: Record<string, { policies: number, revenue: number }> = {};
@@ -91,10 +96,12 @@ export async function GET(request: NextRequest) {
             policiesSnap.forEach((childSnap) => {
                 const pol = childSnap.val();
                 if (!pol.deletedAt && pol.status !== "CANCELLED") {
-                    totalPolicies++;
+                    totalPoliciesCount++;
                     const polMonth = pol.createdAt?.slice(0, 7);
-                    if (polMonth === thisMonthStr) newPoliciesThisMonth++;
-                    if (polMonth === lastMonthStr) newPoliciesLastMonth++;
+                    
+                    const isTargetMonth = polMonth === targetMonthStr;
+                    if (isTargetMonth) newPoliciesTargetMonth++;
+                    if (polMonth === prevMonthStr) newPoliciesPrevMonth++;
 
                     const formattedMonth = formatMonth(pol.createdAt);
                     if (!monthlyDataMap[formattedMonth]) {
@@ -107,9 +114,8 @@ export async function GET(request: NextRequest) {
                     planDistributionMap[plan].count++;
                     planDistributionMap[plan].revenue += (parseFloat(pol.premiumAmount) || 0);
 
-                    // For agents, we might need to look at createdBy or agentId if stored on policy
-                    // Assuming createdBy is the agent
-                    if (pol.createdBy) {
+                    // For agents, only track performance for the TARGET month as per requirements
+                    if (pol.createdBy && isTargetMonth) {
                         if (!agentStatsMap[pol.createdBy]) agentStatsMap[pol.createdBy] = { policies: 0, revenue: 0 };
                         agentStatsMap[pol.createdBy].policies++;
                         agentStatsMap[pol.createdBy].revenue += (parseFloat(pol.premiumAmount) || 0);
@@ -129,7 +135,7 @@ export async function GET(request: NextRequest) {
             .map(([plan, stats]) => ({
                 plan,
                 count: stats.count,
-                percentage: Math.round((stats.count / totalPolicies) * 100) || 0,
+                percentage: Math.round((stats.count / totalPoliciesCount) * 100) || 0,
                 revenue: stats.revenue
             }));
 
@@ -148,22 +154,22 @@ export async function GET(request: NextRequest) {
                     revenue: stats.revenue
                 };
             })
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 5); // top 5
+            .sort((a, b) => b.policies - a.policies) // Requirement: compare clients they registered
+            .slice(0, 10); 
 
-        const revenueGrowth = lastMonthRevenue ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
-        const claimsGrowth = lastMonthClaims ? ((thisMonthClaims - lastMonthClaims) / lastMonthClaims) * 100 : 0;
-        const policyGrowth = newPoliciesLastMonth ? ((newPoliciesThisMonth - newPoliciesLastMonth) / newPoliciesLastMonth) * 100 : 0;
+        const revenueGrowth = prevMonthRevenue ? ((targetMonthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 : 0;
+        const claimsGrowth = prevMonthClaims ? ((targetMonthClaims - prevMonthClaims) / prevMonthClaims) * 100 : 0;
+        const policyGrowth = newPoliciesPrevMonth ? ((newPoliciesTargetMonth - newPoliciesPrevMonth) / newPoliciesPrevMonth) * 100 : 0;
 
         return NextResponse.json({
             keyMetrics: {
-                totalRevenue: thisMonthRevenue, // or overall depending on UI
+                totalRevenue: targetMonthRevenue, 
                 revenueGrowth,
-                claimsPaid: thisMonthClaims,
+                claimsPaid: targetMonthClaims,
                 claimsGrowth,
-                newPolicies: newPoliciesThisMonth,
+                newPolicies: newPoliciesTargetMonth,
                 policyGrowth,
-                netPosition: thisMonthRevenue - thisMonthClaims
+                netPosition: targetMonthRevenue - targetMonthClaims
             },
             monthlyData,
             planDistribution,

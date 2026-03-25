@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { formatDate, formatCurrency, STATUS_COLORS } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { ShareDocumentButton } from "@/components/ui/ShareDocumentButton";
 
 export default function AlterationDetailPage() {
     const { id } = useParams();
@@ -96,9 +97,15 @@ export default function AlterationDetailPage() {
                         <p className="text-gray-500">Submitted on {formatDate(alteration.createdAt)}</p>
                     </div>
                 </div>
-                <Badge className={STATUS_COLORS[alteration.status] || "bg-gray-100 text-gray-800"}>
-                    {alteration.status}
-                </Badge>
+                <div className="flex items-center gap-3">
+                    <ShareDocumentButton 
+                        title={`Alteration #${alteration.alterationNumber}`} 
+                        text={`Hello ${alteration.policy?.client?.firstName},\n\nHere is a link to your Royalty Funeral Services Alteration Request #${alteration.alterationNumber}.`}
+                    />
+                    <Badge className={STATUS_COLORS[alteration.status] || "bg-gray-100 text-gray-800"}>
+                        {alteration.status}
+                    </Badge>
+                </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">

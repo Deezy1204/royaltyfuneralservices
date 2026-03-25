@@ -100,6 +100,21 @@ export async function DELETE(
     // Soft delete to preserve referential integrity
     await update(userRef, { deletedAt: new Date().toISOString(), isActive: false });
 
+    // Re-assign clients of this agent to the admin performing the deletion
+    const clientsSnap = await get(ref(db, "clients"));
+    if (clientsSnap.exists()) {
+      const updatesToClients: any = {};
+      clientsSnap.forEach((child) => {
+        const client = child.val();
+        if (client.createdBy === id) {
+          updatesToClients[`clients/${child.key}/createdBy`] = currentUser.userId;
+        }
+      });
+      if (Object.keys(updatesToClients).length > 0) {
+        await update(ref(db), updatesToClients);
+      }
+    }
+
     await createAuditLog(
       currentUser.userId,
       "DELETE",

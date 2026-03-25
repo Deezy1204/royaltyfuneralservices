@@ -8,15 +8,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
     ArrowLeft, CheckCircle2, XCircle, Clock, FileText, User,
-    Calendar, FileDigit, Building, Printer, FileCheck, MapPin, FileSignature
+    Calendar, FileDigit, Building, Printer, FileCheck, MapPin, FileSignature, ArrowRightLeft, ShieldAlert
 } from "lucide-react";
 import { formatDate, formatCurrency, STATUS_COLORS, PLAN_COLORS } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { ShareDocumentButton } from "@/components/ui/ShareDocumentButton";
 
 export default function ClaimDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const [claim, setClaim] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [actionSubmitting, setActionSubmitting] = useState(false);
+    const [selectedTarget, setSelectedTarget] = useState<string>("");
 
     useEffect(() => {
         const fetchClaim = async () => {
@@ -57,6 +62,68 @@ export default function ClaimDetailsPage() {
         );
     }
 
+    const handlePolicyAction = async (action: "TERMINATE" | "TRANSFER") => {
+        if (action === "TRANSFER" && !selectedTarget) {
+            toast.error("Please select a dependent or beneficiary to transfer the policy to.");
+            return;
+        }
+
+        let targetPayload = null;
+        if (action === "TRANSFER") {
+            const [type, id] = selectedTarget.split(":");
+            let targetData = null;
+            if (type === "DEPENDENT") {
+                targetData = claim.policy?.dependents?.[id];
+            } else {
+                targetData = claim.policy?.beneficiaries?.[id];
+            }
+            targetPayload = { type, id, data: targetData };
+        }
+
+        setActionSubmitting(true);
+        try {
+            const res = await fetch(`/api/claims/${claim.id}/transfer`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, transferTarget: targetPayload })
+            });
+
+            if (res.ok) {
+                toast.success(action === "TERMINATE" ? "Policy terminated successfully" : "Policy transferred successfully");
+                // Refresh claim
+                const refreshed = await fetch(`/api/claims/${claim.id}`);
+                const data = await refreshed.json();
+                setClaim(data.claim);
+            } else {
+                const err = await res.json();
+                toast.error(err.error || "Failed to process policy action");
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error("An error occurred processing the policy action");
+        } finally {
+            setActionSubmitting(false);
+        }
+    };
+
+    const collectTransferTargets = () => {
+        const targets: Array<{ id: string; type: string; name: string; relation: string }> = [];
+        if (claim?.policy?.dependents) {
+            Object.entries(claim.policy.dependents).forEach(([id, dep]: [string, any]) => {
+                targets.push({ id, type: "DEPENDENT", name: dep.firstName + " " + dep.lastName, relation: dep.relationship || "Dependent" });
+            });
+        }
+        if (claim?.policy?.beneficiaries) {
+            Object.entries(claim.policy.beneficiaries).forEach(([id, ben]: [string, any]) => {
+                targets.push({ id, type: "BENEFICIARY", name: ben.name, relation: ben.relationship || "Beneficiary" });
+            });
+        }
+        // Exclude the deceased if they are in the list
+        return targets.filter(t => t.id !== claim.dependentId);
+    };
+
+    const transferTargets = collectTransferTargets();
+
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-10 print:max-w-none print:m-0 print:p-0">
             {/* Header */}
@@ -74,6 +141,10 @@ export default function ClaimDetailsPage() {
                     <Button variant="outline" onClick={() => window.print()}>
                         <Printer className="mr-2 h-4 w-4" /> Print
                     </Button>
+                    <ShareDocumentButton 
+                        title={`Claim ${claim.claimNumber}`} 
+                        text={`Hello,\n\nHere is a link to the Royalty Funeral Services Claim Document ${claim.claimNumber}.`}
+                    />
                     <Badge className={STATUS_COLORS[claim.status] || "bg-gray-100 text-gray-800"}>
                         {claim.status.replace("_", " ")}
                     </Badge>
@@ -318,6 +389,100 @@ export default function ClaimDetailsPage() {
                                     Proceed to Declaration
                                 </Button>
                             </Link>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {claim.status === "PAID" && !claim.policyActionTaken && (
+                    <Card className="md:col-span-2 border-purple-200 bg-purple-50/30 print:hidden mt-6">
+                        <CardHeader className="bg-purple-100/50 border-b border-purple-100 pb-4">
+                            <CardTitle className="flex items-center gap-2 text-lg text-purple-900">
+                                <ArrowRightLeft className="h-5 w-5 text-purple-600" />
+                                Post-Claim Policy Action Required
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-6">
+                            <p className="text-sm text-gray-700 mb-4">
+                                This claim has been fully paid. Since the deceased was the principal member, you need to either terminate the policy or transfer it to a surviving dependent or beneficiary to assume principal membership.
+                            </p>
+                            
+                            <div className="flex flex-col md:flex-row gap-6 items-start">
+                                <div className="flex-1 space-y-4 p-4 border rounded-lg bg-white border-red-100">
+                                    <div className="flex items-center gap-2">
+                                        <ShieldAlert className="h-5 w-5 text-red-500" />
+                                        <h4 className="font-semibold text-gray-900">Terminate Policy</h4>
+                                    </div>
+                                    <p className="text-xs text-gray-500 min-h-[40px]">
+                                        End the policy completely. All remaining dependents will lose their coverage.
+                                    </p>
+                                    <Button 
+                                        variant="destructive" 
+                                        onClick={() => {
+                                            if (window.confirm("Are you sure you want to terminate this policy permanently?")) {
+                                                handlePolicyAction("TERMINATE");
+                                            }
+                                        }}
+                                        disabled={actionSubmitting}
+                                        className="w-full"
+                                    >
+                                        Terminate Policy
+                                    </Button>
+                                </div>
+                                <div className="flex-1 space-y-4 p-4 border rounded-lg bg-white border-purple-100">
+                                    <div className="flex items-center gap-2">
+                                        <User className="h-5 w-5 text-purple-500" />
+                                        <h4 className="font-semibold text-gray-900">Transfer Policy</h4>
+                                    </div>
+                                    <p className="text-xs text-gray-500 min-h-[40px]">
+                                        Keep the policy active by transferring the principal membership to a surviving dependent or beneficiary.
+                                    </p>
+                                    <div className="flex flex-col gap-2">
+                                        <Select value={selectedTarget} onValueChange={setSelectedTarget} disabled={actionSubmitting}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select new Principal Member" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {transferTargets.length === 0 ? (
+                                                    <SelectItem value="none" disabled>No remaining dependents/beneficiaries</SelectItem>
+                                                ) : (
+                                                    transferTargets.map(t => (
+                                                        <SelectItem key={`${t.type}:${t.id}`} value={`${t.type}:${t.id}`}>
+                                                            {t.name} ({t.relation})
+                                                        </SelectItem>
+                                                    ))
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        <Button 
+                                            onClick={() => {
+                                                if (window.confirm("Are you sure you want to transfer this policy?")) {
+                                                    handlePolicyAction("TRANSFER");
+                                                }
+                                            }}
+                                            disabled={actionSubmitting || !selectedTarget || transferTargets.length === 0}
+                                            className="w-full bg-purple-600 hover:bg-purple-700"
+                                        >
+                                            Transfer Policy
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {claim.policyActionTaken && (
+                    <Card className="md:col-span-2 border-green-200 bg-green-50/50 print:hidden mt-6">
+                        <CardContent className="flex items-center justify-between p-6">
+                            <div>
+                                <h3 className="text-lg font-semibold text-green-900 flex items-center gap-2">
+                                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                    Post-Claim Action Completed
+                                </h3>
+                                <p className="text-sm text-green-800 mt-1">
+                                    This policy was successfully <strong>{claim.policyActionTaken.toLowerCase()}</strong> on {new Date(claim.policyActionDate).toLocaleDateString()}.
+                                </p>
+                            </div>
                         </CardContent>
                     </Card>
                 )}

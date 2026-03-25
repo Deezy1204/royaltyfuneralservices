@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +17,7 @@ interface Client {
     lastName: string;
     idNumber: string;
     phone?: string;
-    policies: { id: string; policyNumber: string; planType: string; }[];
+    policies: { id: string; policyNumber: string; planType: string; dependents?: Record<string, any>; }[];
 }
 
 const ALTERATION_TYPES = [
@@ -24,6 +25,8 @@ const ALTERATION_TYPES = [
     { value: "DOWNGRADE", label: "Downgrade Plan" },
     { value: "ADD_DEPENDENT", label: "Add Dependent" },
     { value: "REMOVE_DEPENDENT", label: "Remove Dependent" },
+    { value: "ADD_BENEFICIARY", label: "Add Beneficiary" },
+    { value: "REMOVE_BENEFICIARY", label: "Remove Beneficiary" },
     { value: "ADD_RIDER", label: "Add Rider" },
     { value: "REMOVE_RIDER", label: "Remove Rider" },
     { value: "CHANGE_PAYMENT", label: "Change Payment Details" },
@@ -55,6 +58,11 @@ function NewAlterationContent() {
         dependentName: "",
         dependentDOB: "",
         dependentId: "",
+        beneficiaryName: "",
+        beneficiaryDOB: "",
+        beneficiaryId: "",
+        beneficiaryProportion: "",
+        beneficiaryRelationship: "",
         riderType: "",
         newPaymentMethod: "",
         newBankName: "",
@@ -133,6 +141,18 @@ function NewAlterationContent() {
         e.preventDefault();
         if (!selectedClient) { setError("Please select a client"); return; }
         if (!formData.policyId) { setError("Please select a policy"); return; }
+
+        if (formData.alterationType === "ADD_DEPENDENT") {
+            const selectedPolicy = selectedClient.policies.find(p => p.id === formData.policyId);
+            if (selectedPolicy) {
+                const depCount = selectedPolicy.dependents ? Object.keys(selectedPolicy.dependents).length : 0;
+                if (depCount >= 5) {
+                    toast.error("Maximum of 5 dependents allowed per policy.");
+                    return;
+                }
+            }
+        }
+
         setLoading(true);
         setError("");
 
@@ -319,6 +339,20 @@ function NewAlterationContent() {
 
                             {formData.alterationType === "REMOVE_DEPENDENT" && (
                                 <Input label="Dependent Name / ID to Remove" value={formData.dependentName} onChange={e => handleChange("dependentName", e.target.value)} />
+                            )}
+
+                            {formData.alterationType === "ADD_BENEFICIARY" && (
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <Input label="Beneficiary Full Name" value={formData.beneficiaryName} onChange={e => handleChange("beneficiaryName", e.target.value)} />
+                                    <Input label="Beneficiary ID Number" value={formData.beneficiaryId} onChange={e => handleChange("beneficiaryId", e.target.value)} />
+                                    <Input label="Date of Birth" type="date" value={formData.beneficiaryDOB} onChange={e => handleChange("beneficiaryDOB", e.target.value)} />
+                                    <Input label="Relationship" value={formData.beneficiaryRelationship} onChange={e => handleChange("beneficiaryRelationship", e.target.value)} />
+                                    <Input label="Proportion (%)" type="number" min="1" max="100" value={formData.beneficiaryProportion} onChange={e => handleChange("beneficiaryProportion", e.target.value)} />
+                                </div>
+                            )}
+
+                            {formData.alterationType === "REMOVE_BENEFICIARY" && (
+                                <Input label="Beneficiary Name / ID to Remove" value={formData.beneficiaryName} onChange={e => handleChange("beneficiaryName", e.target.value)} />
                             )}
 
                             {(formData.alterationType === "ADD_RIDER" || formData.alterationType === "REMOVE_RIDER") && (

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Printer, FileText, CheckCircle2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { SignatureSelector } from "@/components/SignatureSelector";
 
 export default function PolicyGenerationPage() {
     const { id } = useParams();
@@ -16,6 +17,8 @@ export default function PolicyGenerationPage() {
     const [client, setClient] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [policy, setPolicy] = useState<any>(null);
+    const [adminSignature, setAdminSignature] = useState<string | null>(null);
+    const [clientSignature, setClientSignature] = useState<string | null>(null);
 
     // Form fields for missing details / overrides
     const [formData, setFormData] = useState({
@@ -62,7 +65,7 @@ export default function PolicyGenerationPage() {
                             planType: firstPolicy.planType || "",
                             coverAmount: firstPolicy.coverAmount ? firstPolicy.coverAmount.toString() : "",
                             premiumAmount: firstPolicy.premiumAmount ? firstPolicy.premiumAmount.toString() : "",
-                            address: `${data.client.streetAddress || ""}, ${data.client.city || ""}`,
+                            address: (data.client.street || "") + (data.client.city ? ", " + data.client.city : ""),
                             idNumber: data.client.idNumber || "",
                         });
                     }
@@ -162,13 +165,35 @@ export default function PolicyGenerationPage() {
                                 />
                             </div>
                         </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 border-t pt-8">
+                            <SignatureSelector 
+                                label="Administrator Signature" 
+                                onSignatureChange={setAdminSignature} 
+                            />
+                            <SignatureSelector 
+                                label="Client Signature" 
+                                onSignatureChange={setClientSignature} 
+                            />
+                        </div>
                     </CardContent>
                 </Card>
 
                 {/* --- PRINTABLE DOCUMENTS --- */}
                 
                 {/* 1. Acceptance Letter */}
-                <div className="bg-white p-8 md:p-16 print:p-0 page-break-after">
+                <div className="bg-white p-8 md:p-16 print:p-0 page-break-after relative min-h-[1050px] flex flex-col">
+                    <div className="flex justify-between items-start mb-12">
+                        <div className="flex items-center gap-3">
+                            <img src="/images/logo.png" alt="Royalty Logo" className="h-14 w-auto object-contain" />
+                        </div>
+                        <div className="text-right text-xs text-gray-500">
+                            <p>Stand 15383 Khami Road</p>
+                            <p>Kelvin North, Bulawayo</p>
+                            <p>Zimbabwe</p>
+                        </div>
+                    </div>
+
                     <div className="mb-6">
                         <p>{client.title} {client.firstName} {client.lastName}</p>
                         <p className="whitespace-pre-wrap">{formData.address}</p>
@@ -185,14 +210,33 @@ export default function PolicyGenerationPage() {
                     </p>
 
                     <p className="mb-8">
-                        Yours faithfully,<br /><br /><br />
-                        <strong>Mr. Nhlanhla Sibanda</strong><br />
-                        Managing Director.
+                        Yours faithfully,<br /><br />
+                        {adminSignature ? (
+                            <img src={adminSignature} alt="Admin Signature" className="h-16 object-contain mb-2" />
+                        ) : (
+                            <div className="h-16 w-48 border-b border-gray-300 mb-2"></div>
+                        )}
+                        <strong>The Administrator</strong>
                     </p>
+
+                    <div className="mt-auto pt-12 text-center border-t border-gray-100 hidden print:block">
+                        <p className="text-blue-900 font-bold text-sm tracking-widest">ROYALTY FUNERAL SERVICES – A DIGNIFIED SEND-OFF</p>
+                    </div>
                 </div>
 
                 {/* 2. Policy Holder Details */}
-                <div className="bg-white p-8 md:p-16 print:p-0 page-break-before">
+                <div className="bg-white p-8 md:p-16 print:p-0 page-break-before relative min-h-[1050px] flex flex-col">
+                    <div className="flex justify-between items-start mb-12">
+                        <div className="flex items-center gap-3">
+                            <img src="/images/logo.png" alt="Royalty Logo" className="h-14 w-auto object-contain" />
+                        </div>
+                        <div className="text-right text-xs text-gray-500">
+                            <p>Stand 15383 Khami Road</p>
+                            <p>Kelvin North, Bulawayo</p>
+                            <p>Zimbabwe</p>
+                        </div>
+                    </div>
+
                     <h2 className="text-xl font-bold uppercase mb-4 underline">Policy Holder Details</h2>
                     
                     <table className="w-full text-sm border-collapse border border-gray-900 mb-8">
@@ -282,10 +326,44 @@ export default function PolicyGenerationPage() {
                             <li>Transport for mourners.</li>
                         </ul>
                     </div>
+
+                    <div className="mt-12 flex justify-between items-end px-4 border-t pt-8">
+                        <div className="text-center">
+                            {adminSignature ? (
+                                <img src={adminSignature} alt="Admin Signature" className="h-12 object-contain mb-1 mx-auto" />
+                            ) : (
+                                <div className="h-12 w-40 border-b border-gray-400 mb-1 mx-auto"></div>
+                            )}
+                            <p className="text-xs font-bold">The Administrator</p>
+                        </div>
+                        <div className="text-center">
+                            {clientSignature ? (
+                                <img src={clientSignature} alt="Client Signature" className="h-12 object-contain mb-1 mx-auto" />
+                            ) : (
+                                <div className="h-12 w-40 border-b border-gray-400 mb-1 mx-auto"></div>
+                            )}
+                            <p className="text-xs font-bold">Client / Policyholder</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-auto pt-12 text-center border-t border-gray-100 hidden print:block">
+                        <p className="text-blue-900 font-bold text-sm tracking-widest">ROYALTY FUNERAL SERVICES – A DIGNIFIED SEND-OFF</p>
+                    </div>
                 </div>
 
                 {/* 3. Terms and Conditions */}
-                <div className="bg-white p-8 md:p-16 print:p-0 page-break-before space-y-4 text-justify text-xs leading-relaxed">
+                <div className="bg-white p-8 md:p-16 print:p-0 page-break-before space-y-4 text-justify text-xs leading-relaxed relative min-h-[1050px] flex flex-col">
+                    <div className="flex justify-between items-start mb-8 border-b pb-4">
+                        <div className="flex items-center gap-3">
+                            <img src="/images/logo.png" alt="Royalty Logo" className="h-12 w-auto object-contain" />
+                        </div>
+                        <div className="text-right text-[10px] font-bold text-blue-900 uppercase">
+                            Terms & Conditions
+                        </div>
+                    </div>
+
+                    <h2 className="text-center text-xl font-black uppercase mb-8 underline tracking-tight">Terms & Conditions</h2>
+
                     <h3 className="font-bold underline text-sm">1. Benefits Payable</h3>
                     <p>Funeral cover for the Principal Life is stated in the attached policy schedule. The benefit entitlement of each co-life is stated in the proposal form.</p>
                     <p>Benefits payable and services to be provided in the event of death shall be as follows:</p>
@@ -341,21 +419,33 @@ export default function PolicyGenerationPage() {
 
                     <h3 className="font-bold underline text-sm mt-4">13.Riders</h3>
                     <p>Payment for Policy riders should be included in the monthly premium. Riders only cover the Principal member (Policy-holder) and their spouses where applicable.</p>
+                    
+                    <div className="mt-auto pt-8 text-center border-t border-gray-100 hidden print:block">
+                        <p className="text-blue-900 font-bold text-xs tracking-widest">ROYALTY FUNERAL SERVICES – A DIGNIFIED SEND-OFF</p>
+                    </div>
                 </div>
 
             </div>
 
-            {/* Print specific CSS classes */}
             <style jsx global>{`
                 @media print {
+                    @page {
+                        margin: 0;
+                        size: auto;
+                    }
+                    body {
+                        margin: 1.6cm;
+                        background-color: white !important;
+                    }
                     .page-break-after {
                         page-break-after: always;
                     }
                     .page-break-before {
                         page-break-before: always;
                     }
-                    body {
-                        background-color: white !important;
+                    /* Hide browser header and footer */
+                    header, footer, .no-print {
+                        display: none !important;
                     }
                 }
             `}</style>
