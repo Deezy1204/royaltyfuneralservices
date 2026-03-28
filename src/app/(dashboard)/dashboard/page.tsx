@@ -138,6 +138,7 @@ const activityIcons: Record<string, typeof FileText> = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const isAgent = user?.role === "AGENT";
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [loading, setLoading] = useState(true);
 

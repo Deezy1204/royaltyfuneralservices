@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { Building2, Save, Shield, Bell, FileText, CreditCard } from "lucide-react";
+import { Building2, Save, Shield, Bell, FileText, CreditCard, User, X } from "lucide-react";
 
 import { toast } from "sonner";
+import { SignatureSelector } from "@/components/SignatureSelector";
 
 const DEFAULT_PLANS = {
   WHITE: {
@@ -72,9 +73,12 @@ const DEFAULT_PLANS = {
 };
 
 export default function SettingsPage() {
-  const [companyName, setCompanyName] = useState("Royalty Funeral Services");
   const [saving, setSaving] = useState(false);
   const [plans, setPlans] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [currentSignature, setCurrentSignature] = useState<string | null>(null);
+  const [pendingSignature, setPendingSignature] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/plans")
@@ -85,6 +89,13 @@ export default function SettingsPage() {
             } else {
                 setPlans(data.plans);
             }
+        })
+        .catch(console.error);
+
+    fetch("/api/users")
+        .then(res => res.json())
+        .then(data => {
+            if (data.users) setUsers(data.users);
         })
         .catch(console.error);
   }, []);
@@ -106,10 +117,54 @@ export default function SettingsPage() {
       }
   };
 
-  const handleSave = async () => {
+  const handleSaveSignature = async (sig: string | null) => {
+    if (!selectedUserId) {
+        toast.error("Please select a user first");
+        return;
+    }
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSaving(false);
+    try {
+        const res = await fetch(`/api/users/${selectedUserId}/signature`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ signature: sig }),
+        });
+        if (!res.ok) throw new Error("Failed to save signature");
+        toast.success("Signature updated successfully");
+        // Update local users state
+        setUsers(users.map(u => u.id === selectedUserId ? { ...u, signature: sig } : u));
+        setCurrentSignature(sig);
+        setPendingSignature(null);
+    } catch (error) {
+        toast.error("Error saving signature");
+    } finally {
+        setSaving(false);
+    }
+  };
+
+  const handleRemoveSignature = async () => {
+    if (!selectedUserId) return;
+    setSaving(true);
+    try {
+        const res = await fetch(`/api/users/${selectedUserId}/signature`, {
+            method: "DELETE"
+        });
+        if (!res.ok) throw new Error("Failed to remove signature");
+        toast.success("Signature removed successfully");
+        setUsers(users.map(u => u.id === selectedUserId ? { ...u, signature: null } : u));
+        setCurrentSignature(null);
+    } catch (error) {
+        toast.error("Error removing signature");
+    } finally {
+        setSaving(false);
+    }
+  };
+
+  const handleUserSelect = (uid: string) => {
+    setSelectedUserId(uid);
+    const user = users.find(u => u.id === uid);
+    setCurrentSignature(user?.signature || null);
+    setPendingSignature(null);
   };
 
   return (
@@ -119,7 +174,93 @@ export default function SettingsPage() {
         <p className="text-gray-500">Manage system configuration and preferences</p>
       </div>
 
-      <div className="space-y-4">
+      <Tabs defaultValue="plans" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="plans" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" /> Plan Configuration
+          </TabsTrigger>
+          <TabsTrigger value="signatures" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" /> Signature Management
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="signatures" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Signature Management
+              </CardTitle>
+              <CardDescription>Upload or set digital signatures for administrators and directors</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Select User</label>
+                    <Select value={selectedUserId} onValueChange={handleUserSelect}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a user to manage signature" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.filter(u => ["ADMIN", "DIRECTOR"].includes(u.role)).map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.firstName} {u.lastName} ({u.role})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedUserId && (
+                    <div className="pt-2 space-y-4">
+                      <SignatureSelector 
+                        label="New Signature" 
+                        onSignatureChange={(sig) => setPendingSignature(sig)} 
+                      />
+                      {pendingSignature && (
+                        <Button 
+                          className="w-full" 
+                          onClick={() => handleSaveSignature(pendingSignature)} 
+                          loading={saving}
+                        >
+                          <Save className="mr-2 h-4 w-4" /> Upload to Database
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border rounded-xl p-6 bg-gray-50 flex flex-col items-center justify-center min-h-[200px]">
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Current Signature</h3>
+                  {selectedUserId ? (
+                    currentSignature ? (
+                      <div className="space-y-4 w-full text-center">
+                        <div className="bg-white p-4 rounded-lg border shadow-sm mx-auto inline-block">
+                          <img src={currentSignature} alt="Signature" className="max-h-32 object-contain" />
+                        </div>
+                        <div>
+                          <Button variant="destructive" size="sm" onClick={handleRemoveSignature} loading={saving}>
+                            <X className="mr-2 h-4 w-4" /> Remove Signature
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 italic text-sm">No signature uploaded for this user</p>
+                    )
+                  ) : (
+                    <div className="text-center text-gray-400">
+                      <User className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                      <p className="text-sm">Select a user to view their signature</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="plans" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -235,7 +376,8 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -13,6 +13,7 @@ interface User {
   role: string;
   phone?: string;
   isActive: boolean;
+  signature?: string | null;
 }
 
 export function useAuth() {

@@ -10,10 +10,12 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Printer, FileText, CheckCircle2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { SignatureSelector } from "@/components/SignatureSelector";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function PolicyGenerationPage() {
     const { id } = useParams();
     const router = useRouter();
+    const { user: currentUser } = useAuth();
     const [client, setClient] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [policy, setPolicy] = useState<any>(null);
@@ -43,6 +45,12 @@ export default function PolicyGenerationPage() {
         d.setFullYear(d.getFullYear() + 20);
         return formatDate(d.toISOString());
     };
+
+    useEffect(() => {
+        if (currentUser?.signature) {
+            setAdminSignature(currentUser.signature);
+        }
+    }, [currentUser]);
 
     useEffect(() => {
         const fetchClient = async () => {

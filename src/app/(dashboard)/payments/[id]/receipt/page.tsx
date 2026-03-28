@@ -7,12 +7,21 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, FileText, CheckCircle2 } from "lucide-react";
 import { formatDate, formatCurrency, numberToWords } from "@/lib/utils";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ReceiptPage() {
     const { id } = useParams();
+    const { user: currentUser } = useAuth();
     const [payment, setPayment] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [adminSignature, setAdminSignature] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (currentUser?.signature) {
+            setAdminSignature(currentUser.signature);
+        }
+    }, [currentUser]);
 
     useEffect(() => {
         const fetchPayment = async () => {
@@ -175,12 +184,12 @@ export default function ReceiptPage() {
                                     <p className="text-[10px] text-gray-400 uppercase font-bold">Customer Signature</p>
                                 </div>
                                 <div className="space-y-1">
-                                    {payment.adminSignature ? (
-                                        <img src={payment.adminSignature} alt="Company Officer Signature" className="h-12 object-contain mx-auto print:h-10" />
+                                    {adminSignature || payment.adminSignature ? (
+                                        <img src={adminSignature || payment.adminSignature} alt="Company Officer Signature" className="h-12 object-contain mx-auto print:h-10" />
                                     ) : (
                                         <div className="h-12 w-48 border-b border-gray-300 mx-auto print:h-8"></div>
                                     )}
-                                    <p className="text-[10px] text-gray-400 uppercase font-bold">Company Officer</p>
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold">Company Officer ({currentUser?.firstName || 'Staff'})</p>
                                 </div>
                             </div>
                             <p className="text-[10px] text-gray-400 mt-8 print:mt-4">

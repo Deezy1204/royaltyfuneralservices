@@ -1,17 +1,5 @@
-Edits and changes
-# On proposal creation, i should be able to still add the Dependents even on a single life Plan (limit of 5 dependents)
-# Fix the signature upload sections, the buttons are overflowing their containers
-# I dont see Beneficiaries listed on the client details page even they are in the db
-# Also on the client details page, on the premium breakdown section, the base premium is the original policy price selected, then the Dependents premium is the total of all the dependents premium added together, then the total premium is the sum of the base premium and the dependents premium
-# Remove the cover Amount everywhere, i dont need it
-# I think the reason i still dont see the agents commision is because the client is still not linked to the agent, when creating the proposal, the createdBy should also be sent to the client details and policy details in the DB, I dont see anthing on the agent commissions even if the client has paid, the way payments are recorderd, there's an Amount, monthsCoverd (which lists months paid for, separated by ","), then the commision for the agent is seen by calculating the time from the date they were added up to the current date, if they've had a year or less their commision is 20%, if more than a year their commision is 10%, then we take the amount and devide by the monthsCoverd to know how much the client paid for each month, then the amount we get, we take 20% of that amount for each month if the agent has had a year or less, if they've had more than a year we take 10% of that amount for each month, then thats their commision, on the commision display it should show commissions for each month respectively depending on how many months the client has paid for
-# The agent should only be able to see their commisions, 
-# I should be able to track the Agent's clients, howmany clients each agent has
-# On the audit logs, i should be able to clear logs from the db for a specific selected period
-# Implement a forgot password on the login screen
-# The agents should be restricted from seeing the paid claims, analytics that include or show anything about the company monetary figures, agents should only see what concerns them, they cant see other policies, clients, alterations, payments etc except only if its clients under thema and it concerns them
-# The ID number on the proposal creation should be optional
-# Remove the proportion field for the beneficiary addition
-# Remove the cover amount from the proposal and anywhere in the system
-# When i submit the proposal, on review i cant see the dependents
-# On the proposal creation, choose whether the plan is the Service Plan (meaning they get the services when they claim) or it's the Cash Plan (meaning they get only cash when they claim) and anywhere you display the policy details that should be indicated 
+# I need to be able to add the beneficiary contact number and be able to see it on beneficiary details
+# I need to be able see the admin signature placed automatically on the policy generation if it's there on the db
+# Why is this address still not changed to my current Royalty address  write to Royalty Funeral Services Suite 309 Sterling House, between L. Takawira and 8th Avenue along J. Moyo Street Bulawayo. pleease fix that
+# The agents should not be able to review and approve proposals
+# On the payment creation, it should show a hint of how much monthly premium is supposed to be paid
