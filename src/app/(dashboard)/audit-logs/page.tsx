@@ -14,7 +14,18 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { ShieldAlert, Shield, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShieldAlert, Shield, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogDescription, 
+    DialogFooter, 
+    DialogHeader, 
+    DialogTitle, 
+    DialogTrigger 
+} from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/useAuth";
+import { Label } from "@/components/ui/label";
 
 interface AuditLog {
     id: string;
@@ -34,24 +45,61 @@ export default function AuditLogsPage() {
     const [loading, setLoading] = useState(true);
     const [sortConfig, setSortConfig] = useState<{ key: keyof AuditLog, direction: 'asc' | 'desc' } | null>({ key: 'createdAt', direction: 'desc' });
     const [page, setPage] = useState(1);
+    const [isCleanupOpen, setIsCleanupOpen] = useState(false);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [isCleaning, setIsCleaning] = useState(false);
+    
+    const { user } = useAuth();
+    const isDirectorOrAdmin = user?.role === "DIRECTOR" || user?.role === "ADMIN";
+    const isDirector = user?.role === "DIRECTOR";
+    
     const limit = 10;
 
-    useEffect(() => {
-        const fetchLogs = async () => {
-            try {
-                const res = await fetch("/api/audit-logs");
-                if (res.ok) {
-                    const data = await res.json();
-                    setLogs(data.logs || []);
-                }
-            } catch (error) {
-                console.error("Failed to fetch audit logs:", error);
-            } finally {
-                setLoading(false);
+    const fetchLogs = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch("/api/audit-logs");
+            if (res.ok) {
+                const data = await res.json();
+                setLogs(data.logs || []);
             }
-        };
+        } catch (error) {
+            console.error("Failed to fetch audit logs:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchLogs();
     }, []);
+
+    const handleCleanup = async () => {
+        if (!startDate || !endDate) return;
+        
+        setIsCleaning(true);
+        try {
+            const res = await fetch("/api/audit-logs/cleanup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ startDate, endDate })
+            });
+            
+            if (res.ok) {
+                setIsCleanupOpen(false);
+                fetchLogs();
+            } else {
+                const data = await res.json();
+                alert(data.error || "Failed to clear logs");
+            }
+        } catch (error) {
+            console.error("Error cleaning logs:", error);
+            alert("An error occurred while clearing logs");
+        } finally {
+            setIsCleaning(false);
+        }
+    };
 
     const getActionBadge = (action: string) => {
         switch (action) {
@@ -122,6 +170,55 @@ export default function AuditLogsPage() {
                     </h1>
                     <p className="text-gray-500">Track and monitor all administrative actions across the system.</p>
                 </div>
+                {isDirector && (
+                    <Dialog open={isCleanupOpen} onOpenChange={setIsCleanupOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Clear Logs
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Clear Audit Logs</DialogTitle>
+                                <DialogDescription>
+                                    This will permanently delete audit logs within the selected date range.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="startDate">Start Date</Label>
+                                    <Input 
+                                        id="startDate" 
+                                        type="date" 
+                                        value={startDate} 
+                                        onChange={(e) => setStartDate(e.target.value)} 
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="endDate">End Date</Label>
+                                    <Input 
+                                        id="endDate" 
+                                        type="date" 
+                                        value={endDate} 
+                                        onChange={(e) => setEndDate(e.target.value)} 
+                                    />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setIsCleanupOpen(false)}>Cancel</Button>
+                                <Button 
+                                    className="bg-red-600 hover:bg-red-700 text-white" 
+                                    onClick={handleCleanup}
+                                    disabled={!startDate || !endDate || isCleaning}
+                                    loading={isCleaning}
+                                >
+                                    Confirm Clear
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
             </div>
 
             <Card>

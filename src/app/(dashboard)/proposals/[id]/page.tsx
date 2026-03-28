@@ -37,8 +37,8 @@ interface Proposal {
     clientCity: string;
     clientPostalCode: string;
     planType: string;
+    planServiceType: string;
     policyType: string;
-    proposedCover: number;
     proposedPremium: number;
     paymentFrequency: string;
     paymentMethod: string;
@@ -228,7 +228,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                     </Card>
 
                     {/* Dependents */}
-                    {proposal.policyType === "FAMILY" && (
+                    {(dependents.length > 0) && (
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -291,10 +291,6 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                                                     <p className="text-xs text-gray-500 uppercase tracking-wider">Relationship</p>
                                                     <Badge variant="outline" className="mt-1">{ben.relationship}</Badge>
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs text-gray-500 uppercase tracking-wider">Proportion</p>
-                                                    <p className="font-medium text-purple-700">{ben.proportion}%</p>
-                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -336,8 +332,8 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                                 <span className="font-medium">{proposal.policyType}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-500">Cover Amount</span>
-                                <span className="font-bold text-gray-900">{formatCurrency(proposal.proposedCover)}</span>
+                                <span className="text-gray-500">Plan Type</span>
+                                <Badge variant="outline">{proposal.planServiceType || "SERVICE"}</Badge>
                             </div>
                             <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-900">Monthly Premium</span>

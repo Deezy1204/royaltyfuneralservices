@@ -129,7 +129,6 @@ export interface Policy {
   status: PolicyStatus;
   paymentFrequency: string;
   paymentMethod?: string;
-  arrearsAmount: number;
   lastPaymentDate?: Date;
   createdAt: Date;
 }
@@ -179,7 +178,6 @@ export interface DashboardStats {
   pendingClaims: number;
   pendingAlterations: number;
   monthlyRevenue: number;
-  totalArrears: number;
   claimsPaid: number;
 }
 

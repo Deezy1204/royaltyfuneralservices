@@ -80,7 +80,6 @@ export default function PaymentsPage() {
     todayTotal: 0,
     monthTotal: 0,
     pendingCount: 0,
-    arrearsCount: 0
   });
 
   const fetchPayments = useCallback(async () => {
@@ -138,7 +137,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -174,19 +173,6 @@ export default function PaymentsPage() {
               </div>
               <div className="rounded-full bg-yellow-100 p-3">
                 <Receipt className="h-5 w-5 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Arrears</p>
-                <p className="text-2xl font-bold text-red-600">{summary.arrearsCount}</p>
-              </div>
-              <div className="rounded-full bg-red-100 p-3">
-                <AlertCircle className="h-5 w-5 text-red-600" />
               </div>
             </div>
           </CardContent>

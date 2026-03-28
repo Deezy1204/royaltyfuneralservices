@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 interface User {
   id: string;
@@ -72,5 +74,9 @@ export function useAuth() {
     router.push("/login");
   };
 
-  return { user, loading, login, logout, checkAuth };
+  const resetPassword = async (email: string) => {
+    await sendPasswordResetEmail(auth, email);
+  };
+
+  return { user, loading, login, logout, resetPassword, checkAuth };
 }

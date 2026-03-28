@@ -40,8 +40,8 @@ export function SignatureSelector({ onSignatureChange, label = "Signature" }: Si
   return (
     <Card className="border-dashed border-2">
       <CardContent className="pt-6 space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <Label className="text-sm font-medium whitespace-nowrap">{label} Option</Label>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
+          <Label className="text-sm font-medium shrink-0">{label} Option</Label>
           <Select 
             value={type} 
             onValueChange={(v: string) => {
@@ -49,18 +49,18 @@ export function SignatureSelector({ onSignatureChange, label = "Signature" }: Si
               clearSignature();
             }}
           >
-            <SelectTrigger className="w-[140px] h-9">
+            <SelectTrigger className="w-full sm:w-[160px] h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="upload">
                 <div className="flex items-center gap-2">
-                  <Upload className="w-3.5 h-3.5" /> <span>Upload</span>
+                  <Upload className="w-3.5 h-3.5" /> <span>Upload Scan</span>
                 </div>
               </SelectItem>
               <SelectItem value="digital">
                 <div className="flex items-center gap-2">
-                  <PenTool className="w-3.5 h-3.5" /> <span>Digital</span>
+                  <PenTool className="w-3.5 h-3.5" /> <span>Digital Pad</span>
                 </div>
               </SelectItem>
             </SelectContent>

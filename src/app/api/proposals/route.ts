@@ -32,6 +32,11 @@ export async function GET(request: NextRequest) {
     // Filter
     proposals = proposals.filter(p => !p.deletedAt);
 
+    // Filter by agent if applicable
+    if (user.role === "AGENT") {
+      proposals = proposals.filter(p => p.agentId === user.userId || p.createdBy === user.userId);
+    }
+
     if (search) {
       const searchLower = search.toLowerCase();
       proposals = proposals.filter(p =>
@@ -111,14 +116,14 @@ export async function POST(request: NextRequest) {
       agentId: user.userId,
       agentCode: body.agentCode,
       policyType: body.policyType,
+      planServiceType: body.planServiceType || "SERVICE",
       planType: body.planType,
-      proposedCover: parseFloat(body.proposedCover),
-      proposedPremium: parseFloat(body.proposedPremium),
+      proposedPremium: parseFloat(body.proposedPremium) || 0,
       clientTitle: body.clientTitle,
       clientFirstName: body.clientFirstName,
       clientLastName: body.clientLastName,
-      clientIdNumber: body.clientIdNumber,
-      clientDOB: new Date(body.clientDOB).toISOString(),
+      clientIdNumber: body.clientIdNumber || null,
+      clientDOB: body.clientDOB ? new Date(body.clientDOB).toISOString() : null,
       clientGender: body.clientGender,
       clientPhone: body.clientPhone,
       clientEmail: body.clientEmail,

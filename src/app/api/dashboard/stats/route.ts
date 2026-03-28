@@ -32,6 +32,8 @@ export async function GET() {
       return NextResponse.json({ error: "Database connection failed" }, { status: 500 });
     }
 
+    const isAgent = user.role === "AGENT";
+
     let totalClients = 0;
     let activeClients = 0;
 
@@ -39,6 +41,8 @@ export async function GET() {
       clientsSnap.forEach(c => {
         const val = c.val();
         if (val && !val.deletedAt) {
+          if (isAgent && (val.agentId !== user.userId && val.createdById !== user.userId)) return;
+          
           totalClients++;
           if (val.isActive) activeClients++;
         }
@@ -47,21 +51,19 @@ export async function GET() {
 
     let totalPolicies = 0;
     let activePolicies = 0;
-    let policiesWithArrearsSum = 0;
     const policiesByPlanMap: Record<string, number> = {};
 
     if (policiesSnap && policiesSnap.exists()) {
       policiesSnap.forEach(p => {
         const val = p.val();
         if (val && !val.deletedAt) {
+          if (isAgent && (val.agentId !== user.userId && val.createdById !== user.userId)) return;
+
           totalPolicies++;
           if (val.status === "ACTIVE") {
             activePolicies++;
             const plan = (typeof val.planType === 'string' ? val.planType : "UNKNOWN") || "UNKNOWN";
             policiesByPlanMap[plan] = (policiesByPlanMap[plan] || 0) + 1;
-          }
-          if (val.arrearsAmount && Number(val.arrearsAmount) > 0) {
-            policiesWithArrearsSum += Number(val.arrearsAmount);
           }
         }
       });
@@ -72,6 +74,7 @@ export async function GET() {
       proposalsSnap.forEach(p => {
         const val = p.val();
         if (val && !val.deletedAt && ["DRAFT", "SUBMITTED", "UNDER_REVIEW"].includes(val.status)) {
+          if (isAgent && val.createdBy !== user.userId && val.agentId !== user.userId) return;
           pendingProposals++;
         }
       });
@@ -84,6 +87,8 @@ export async function GET() {
       claimsSnap.forEach(c => {
         const val = c.val();
         if (val && !val.deletedAt) {
+          if (isAgent && val.agentId !== user.userId && val.createdById !== user.userId) return;
+          
           totalClaims++;
           if (["PENDING", "UNDER_REVIEW"].includes(val.status)) {
             pendingClaims++;
@@ -103,6 +108,7 @@ export async function GET() {
       alterationsSnap.forEach(a => {
         const val = a.val();
         if (val && !val.deletedAt && ["SUBMITTED", "UNDER_REVIEW"].includes(val.status)) {
+          if (isAgent && val.agentId !== user.userId && val.createdById !== user.userId) return;
           pendingAlterations++;
         }
       });
@@ -115,8 +121,13 @@ export async function GET() {
       paymentsSnap.forEach(p => {
         const val = p.val();
         if (val && !val.deletedAt && val.status === "CONFIRMED" && val.paymentDate) {
-          const method = (typeof val.paymentMethod === 'string' ? val.paymentMethod : "UNKNOWN") || "UNKNOWN";
-          paymentsByMethodMap[method] = (paymentsByMethodMap[method] || 0) + 1;
+          if (isAgent && val.agentId !== user.userId && val.createdById !== user.userId) return;
+
+          if (val.paymentMethod) {
+            const method = String(val.paymentMethod).toUpperCase().trim();
+            paymentsByMethodMap[method] = (paymentsByMethodMap[method] || 0) + 1;
+          }
+          
           const pDate = new Date(val.paymentDate).getTime();
           if (!isNaN(pDate) && pDate >= startOfMonth) {
             monthlyRevenue += (Number(val.amount) || 0);
@@ -138,7 +149,6 @@ export async function GET() {
       pendingClaims,
       pendingAlterations,
       monthlyRevenue,
-      totalArrears: policiesWithArrearsSum,
       claimsPaid: claimsPaidSum,
       policiesByPlan,
       paymentsByMethod,

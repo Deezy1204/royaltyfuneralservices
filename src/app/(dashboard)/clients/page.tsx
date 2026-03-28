@@ -287,18 +287,6 @@ export default function ClientsPage() {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link href={`/clients/${client.id}/edit`}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit Client
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/proposals/new?clientId=${client.id}`}>
-                                <FileText className="mr-2 h-4 w-4" />
-                                Create Proposal
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
                               <Link href={`/payments/new?clientId=${client.id}`}>
                                 <CreditCard className="mr-2 h-4 w-4" />
                                 Record Payment

@@ -26,12 +26,31 @@ export async function GET(request: NextRequest) {
     if (snapshot.exists()) {
       snapshot.forEach((childSnapshot) => {
         const p = childSnapshot.val();
-        payments.push({ id: childSnapshot.key, ...p });
+        if (!p.deletedAt) {
+          payments.push({ id: childSnapshot.key, ...p });
+        }
       });
     }
 
-    // Filter
-    payments = payments.filter(p => !p.deletedAt);
+    // Agent data isolation
+    if (user.role === "AGENT") {
+      // First, fetch clients belonging to this agent to get their IDs
+      const clientsRef = ref(db, 'clients');
+      const clientsSnapshot = await get(clientsRef);
+      const agentClientIds = new Set<string>();
+      
+      if (clientsSnapshot.exists()) {
+        clientsSnapshot.forEach(child => {
+          const clientData = child.val();
+          if (clientData.agentId === user.userId || clientData.createdById === user.userId) {
+            agentClientIds.add(child.key as string);
+          }
+        });
+      }
+      
+      // Filter payments to only include those for this agent's clients
+      payments = payments.filter(p => agentClientIds.has(p.clientId));
+    }
 
     // Enhance first so we can search on client details
     let enhancedPayments = await Promise.all(payments.map(async (pay) => {
@@ -107,26 +126,22 @@ export async function GET(request: NextRequest) {
       if (p.status === "PENDING") pendingCount++;
     });
 
-    // For arrearsCount, we need to check all active policies. 
-    // This could be cached or pre-calculated in a real app.
-    const policiesSnapshot = await get(ref(db, 'policies'));
-    let arrearsCount = 0;
-    if (policiesSnapshot.exists()) {
-      policiesSnapshot.forEach(child => {
-        const pol = child.val();
-        if (!pol.deletedAt && pol.arrearsAmount > 0) {
-          arrearsCount++;
-        }
-      });
-    }
+    payments.forEach(p => {
+      const pDate = new Date(p.paymentDate);
+      const isToday = p.paymentDate.startsWith(todayStr);
+      const isThisMonth = pDate.getTime() >= monthStart;
+
+      if (isToday) todayTotal += p.amount;
+      if (isThisMonth) monthTotal += p.amount;
+      if (p.status === "PENDING") pendingCount++;
+    });
 
     return NextResponse.json({
       payments: paginatedPayments,
       summary: {
         todayTotal,
         monthTotal,
-        pendingCount,
-        arrearsCount
+        pendingCount
       },
       pagination: {
         page,
@@ -171,6 +186,8 @@ export async function POST(request: NextRequest) {
       confirmedAt: new Date().toISOString(),
       receivedById: user.userId,
       currency: body.currency || "USD",
+      adminSignature: body.adminSignature || null,
+      clientSignature: body.clientSignature || null,
       notes: body.notes || "",
       createdAt: new Date().toISOString()
     };
@@ -185,11 +202,8 @@ export async function POST(request: NextRequest) {
     const policySnap = await get(policyRef);
 
     if (policySnap.exists()) {
-      const p = policySnap.val();
-      const newArrears = Math.max(0, (p.arrearsAmount || 0) - parseFloat(body.amount));
       await update(policyRef, {
         lastPaymentDate: new Date(body.paymentDate).toISOString(),
-        arrearsAmount: newArrears
       });
     }
 

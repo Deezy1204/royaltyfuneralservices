@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
             proposalsSnap.forEach((childSnap) => {
                 const prop = childSnap.val();
                 if (prop.status === "PENDING" && !prop.deletedAt) {
+                    if (user.role === "AGENT" && prop.createdById !== user.userId && prop.agentId !== user.userId) return;
+
                     const clientName = prop.clientId && clients[prop.clientId]
                         ? `${clients[prop.clientId].firstName} ${clients[prop.clientId].lastName}`
                         : "Unknown Client";
@@ -53,6 +55,8 @@ export async function GET(request: NextRequest) {
                 const claim = childSnap.val();
                 if (!claim.deletedAt) {
                     if (claim.status === "SUBMITTED" || claim.status === "UNDER_REVIEW") {
+                        if (user.role === "AGENT" && claim.createdById !== user.userId && claim.agentId !== user.userId) return;
+
                         notifications.push({
                             id: idCounter++,
                             type: "CLAIM_UPDATE",
@@ -89,23 +93,11 @@ export async function GET(request: NextRequest) {
             policiesSnap.forEach((childSnap) => {
                 const pol = childSnap.val();
                 if (!pol.deletedAt && pol.status === "ACTIVE") {
+                    if (user.role === "AGENT" && pol.agentId !== user.userId && pol.createdById !== user.userId) return;
+
                     const clientName = pol.clientId && clients[pol.clientId]
                         ? `${clients[pol.clientId].firstName} ${clients[pol.clientId].lastName}`
                         : "Unknown Client";
-
-                    // Overdue payments
-                    if (pol.arrearsAmount > 0) {
-                        notifications.push({
-                            id: idCounter++,
-                            type: "PAYMENT_DUE",
-                            title: "Payment Overdue",
-                            message: `Policy ${pol.policyNumber} (${clientName}) has an overdue amount of ${pol.arrearsAmount}`,
-                            time: new Date().toISOString(), // could use lastPaymentDate
-                            read: false,
-                            priority: "HIGH",
-                            link: `/policies/${childSnap.key}`
-                        });
-                    }
 
                     // Waiting period ends soon (in next 7 days)
                     if (pol.waitingPeriodEnd) {

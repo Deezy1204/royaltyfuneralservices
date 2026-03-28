@@ -102,10 +102,9 @@ interface Dependent {
 interface Beneficiary {
   firstName: string;
   lastName: string;
-  idNumber: string;
+  idNumber?: string;
   dateOfBirth: string;
   relationship: string;
-  proportion: number;
 }
 
 function NewProposalContent() {
@@ -143,8 +142,8 @@ function NewProposalContent() {
   const [formData, setFormData] = useState({
     clientId: clientId || "",
     policyType: "INDIVIDUAL",
+    planServiceType: "SERVICE", // NEW: SERVICE or CASH
     planType: "",
-    proposedCover: 0,
     proposedPremium: 0,
     clientTitle: "",
     clientFirstName: "",
@@ -207,7 +206,6 @@ function NewProposalContent() {
     const planData = dbPlans?.[planKey];
     if (planData) {
       handleChange("planType", planKey);
-      handleChange("proposedCover", planData.cover);
       if (planData.options?.length > 0) {
         handleOptionSelect(planData.options[0]);
       }
@@ -259,7 +257,6 @@ function NewProposalContent() {
         idNumber: "",
         dateOfBirth: "",
         relationship: "",
-        proportion: 100,
       },
     ]);
   };
@@ -305,10 +302,17 @@ function NewProposalContent() {
     setLoading(true);
 
     try {
+      const plans = (dbPlans || DEFAULT_PLANS) as any;
+      const planData = plans[selectedPlan];
+      const depPremium = Number(planData?.dependentPremium || 0);
+
       const payload = {
         ...formData,
         proposedPremium: calculateTotalPremium(),
-        dependents: dependents.length > 0 ? dependents : undefined,
+        dependents: dependents.length > 0 ? dependents.map(d => ({
+          ...d,
+          premium: depPremium
+        })) : undefined,
         beneficiaries: beneficiaries.length > 0 ? beneficiaries : undefined,
         status,
       };
@@ -419,6 +423,43 @@ function NewProposalContent() {
           </CardContent>
         </Card>
 
+        {/* Policy Type Selection */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-purple-600" />
+              Plan Type
+            </CardTitle>
+            <CardDescription>Select whether this is a Service Plan or Cash Plan</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div
+                onClick={() => handleChange("planServiceType", "SERVICE")}
+                className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all ${
+                  formData.planServiceType === "SERVICE"
+                    ? "border-purple-600 bg-purple-50 ring-2 ring-purple-200"
+                    : "border-gray-200 hover:border-purple-300"
+                }`}
+              >
+                <p className="font-bold text-gray-900">Service Plan</p>
+                <p className="text-xs text-gray-500">Traditional funeral services</p>
+              </div>
+              <div
+                onClick={() => handleChange("planServiceType", "CASH")}
+                className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all ${
+                  formData.planServiceType === "CASH"
+                    ? "border-purple-600 bg-purple-50 ring-2 ring-purple-200"
+                    : "border-gray-200 hover:border-purple-300"
+                }`}
+              >
+                <p className="font-bold text-gray-900">Cash Plan</p>
+                <p className="text-xs text-gray-500">Cash payout benefit</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Client Information */}
         <Card>
           <CardHeader>
@@ -460,7 +501,6 @@ function NewProposalContent() {
               label="ID Number"
               value={formData.clientIdNumber}
               onChange={(e) => handleChange("clientIdNumber", e.target.value)}
-              required
               maxLength={13}
             />
 
@@ -524,8 +564,7 @@ function NewProposalContent() {
         </Card>
 
         {/* Dependents */}
-        {formData.policyType === "FAMILY" && (
-          <Card>
+        <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -635,7 +674,6 @@ function NewProposalContent() {
               )}
             </CardContent>
           </Card>
-        )}
 
         {/* Beneficiaries */}
         <Card>
@@ -703,15 +741,6 @@ function NewProposalContent() {
                         type="date"
                         value={ben.dateOfBirth}
                         onChange={(e) => updateBeneficiary(index, "dateOfBirth", e.target.value)}
-                        required
-                      />
-                      <Input
-                        label="Proportion (%)"
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={ben.proportion}
-                        onChange={(e) => updateBeneficiary(index, "proportion", Number(e.target.value))}
                         required
                       />
                       <Select

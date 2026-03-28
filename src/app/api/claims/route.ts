@@ -25,12 +25,31 @@ export async function GET(request: NextRequest) {
     if (snapshot.exists()) {
       snapshot.forEach((childSnapshot) => {
         const claim = childSnapshot.val();
-        claims.push({ id: childSnapshot.key, ...claim });
+        if (!claim.deletedAt) {
+          claims.push({ id: childSnapshot.key, ...claim });
+        }
       });
     }
 
-    // Filter Deleted
-    claims = claims.filter(c => !c.deletedAt);
+    // Agent data isolation
+    if (user.role === "AGENT") {
+      // First, fetch clients belonging to this agent to get their IDs
+      const clientsRef = ref(db, 'clients');
+      const clientsSnapshot = await get(clientsRef);
+      const agentClientIds = new Set<string>();
+      
+      if (clientsSnapshot.exists()) {
+        clientsSnapshot.forEach(child => {
+          const clientData = child.val();
+          if (clientData.agentId === user.userId || clientData.createdById === user.userId) {
+            agentClientIds.add(child.key as string);
+          }
+        });
+      }
+      
+      // Filter claims to only include those for this agent's clients
+      claims = claims.filter(c => agentClientIds.has(c.clientId));
+    }
 
     // Filter Search
     if (search) {

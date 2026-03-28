@@ -24,17 +24,18 @@ import {
   FileCheck,
   Calendar,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const reportTypes = [
   { id: "revenue", name: "Revenue Report", icon: CreditCard, description: "Monthly revenue breakdown" },
   { id: "claims", name: "Claims Report", icon: FileCheck, description: "Claims statistics and payouts" },
   { id: "policies", name: "Policy Report", icon: FileText, description: "Active policies analysis" },
   { id: "agents", name: "Agent Performance", icon: Users, description: "Sales by agent" },
-  { id: "arrears", name: "Arrears Report", icon: TrendingDown, description: "Outstanding payments" },
   { id: "renewals", name: "Renewals Report", icon: Calendar, description: "Upcoming renewals" },
 ];
 
 export default function ReportsPage() {
+  const { user } = useAuth();
   const [month, setMonth] = useState<number>(new Date().getMonth());
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
@@ -152,77 +153,79 @@ export default function ReportsPage() {
         </div>
       ) : (
         <>
-          {/* Key Metrics */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Revenue ({months[month]})</p>
-                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(metrics.totalRevenue)}</p>
-                    <div className={`flex items-center mt-1 text-sm ${metrics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {metrics.revenueGrowth >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                      {Math.abs(metrics.revenueGrowth).toFixed(1)}%
+          {/* Key Metrics - Hidden for Agents */}
+          {user?.role !== 'AGENT' && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Revenue ({months[month]})</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(metrics.totalRevenue)}</p>
+                      <div className={`flex items-center mt-1 text-sm ${metrics.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {metrics.revenueGrowth >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                        {Math.abs(metrics.revenueGrowth).toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="rounded-full bg-green-100 p-3">
+                      <CreditCard className="h-6 w-6 text-green-600" />
                     </div>
                   </div>
-                  <div className="rounded-full bg-green-100 p-3">
-                    <CreditCard className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Claims Paid</p>
-                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(metrics.claimsPaid)}</p>
-                    <div className={`flex items-center mt-1 text-sm ${metrics.claimsGrowth >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      {metrics.claimsGrowth >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                      {Math.abs(metrics.claimsGrowth).toFixed(1)}%
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Claims Paid</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(metrics.claimsPaid)}</p>
+                      <div className={`flex items-center mt-1 text-sm ${metrics.claimsGrowth >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {metrics.claimsGrowth >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                        {Math.abs(metrics.claimsGrowth).toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="rounded-full bg-orange-100 p-3">
+                      <FileCheck className="h-6 w-6 text-orange-600" />
                     </div>
                   </div>
-                  <div className="rounded-full bg-orange-100 p-3">
-                    <FileCheck className="h-6 w-6 text-orange-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">New Policies</p>
-                    <p className="text-2xl font-bold text-gray-900">{metrics.newPolicies}</p>
-                    <div className={`flex items-center mt-1 text-sm ${metrics.policyGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {metrics.policyGrowth >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                      {Math.abs(metrics.policyGrowth).toFixed(1)}%
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">New Policies</p>
+                      <p className="text-2xl font-bold text-gray-900">{metrics.newPolicies}</p>
+                      <div className={`flex items-center mt-1 text-sm ${metrics.policyGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {metrics.policyGrowth >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                        {Math.abs(metrics.policyGrowth).toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="rounded-full bg-blue-100 p-3">
+                      <FileText className="h-6 w-6 text-blue-600" />
                     </div>
                   </div>
-                  <div className="rounded-full bg-blue-100 p-3">
-                    <FileText className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500">Net Position</p>
-                    <p className="text-2xl font-bold text-purple-600">{formatCurrency(metrics.netPosition)}</p>
-                    <p className="text-xs text-gray-500 mt-1">Cash Flow Surplus</p>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Net Position</p>
+                      <p className="text-2xl font-bold text-purple-600">{formatCurrency(metrics.netPosition)}</p>
+                      <p className="text-xs text-gray-500 mt-1">Cash Flow Surplus</p>
+                    </div>
+                    <div className="rounded-full bg-purple-100 p-3">
+                      <BarChart3 className="h-6 w-6 text-purple-600" />
+                    </div>
                   </div>
-                  <div className="rounded-full bg-purple-100 p-3">
-                    <BarChart3 className="h-6 w-6 text-purple-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList>
@@ -307,7 +310,7 @@ export default function ReportsPage() {
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-green-600">{formatCurrency(agent.revenue)}</p>
-                              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Premium Revenue</p>
+                              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Premium Revenue Per Month</p>
                             </div>
                           </div>
                         ))

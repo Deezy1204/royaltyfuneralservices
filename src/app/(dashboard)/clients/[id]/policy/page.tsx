@@ -25,7 +25,6 @@ export default function PolicyGenerationPage() {
         policyNumber: "",
         inceptionDate: "",
         planType: "",
-        coverAmount: "",
         premiumAmount: "",
         address: "",
         idNumber: "",
@@ -63,7 +62,6 @@ export default function PolicyGenerationPage() {
                             policyNumber: firstPolicy.policyNumber || "",
                             inceptionDate: firstPolicy.inceptionDate ? firstPolicy.inceptionDate.substring(0, 10) : "",
                             planType: firstPolicy.planType || "",
-                            coverAmount: firstPolicy.coverAmount ? firstPolicy.coverAmount.toString() : "",
                             premiumAmount: firstPolicy.premiumAmount ? firstPolicy.premiumAmount.toString() : "",
                             address: (data.client.street || "") + (data.client.city ? ", " + data.client.city : ""),
                             idNumber: data.client.idNumber || "",
@@ -134,13 +132,6 @@ export default function PolicyGenerationPage() {
                                 <Input 
                                     value={formData.planType} 
                                     onChange={(e) => setFormData({...formData, planType: e.target.value})}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Cover Amount</Label>
-                                <Input 
-                                    value={formData.coverAmount} 
-                                    onChange={(e) => setFormData({...formData, coverAmount: e.target.value})}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -296,8 +287,7 @@ export default function PolicyGenerationPage() {
                                         <th className="p-2 text-left border-r border-gray-900">Full Name</th>
                                         <th className="p-2 text-left border-r border-gray-900">ID Number</th>
                                         <th className="p-2 text-left border-r border-gray-900">Relationship</th>
-                                        <th className="p-2 text-left border-r border-gray-900">Contact</th>
-                                        <th className="p-2 text-left">Allocation</th>
+                                        <th className="p-2 text-left">Contact</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -306,8 +296,7 @@ export default function PolicyGenerationPage() {
                                             <td className="p-2 border-r border-gray-900">{ben.firstName} {ben.lastName}</td>
                                             <td className="p-2 border-r border-gray-900">{ben.idNumber}</td>
                                             <td className="p-2 border-r border-gray-900">{ben.relationship}</td>
-                                            <td className="p-2 border-r border-gray-900">{ben.phone}</td>
-                                            <td className="p-2">{ben.allocation}%</td>
+                                            <td className="p-2">{ben.phone}</td>
                                         </tr>
                                     ))}
                                 </tbody>

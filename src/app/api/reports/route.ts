@@ -21,12 +21,23 @@ export async function GET(request: NextRequest) {
         const prevMonthStr = prevMonthDate.toISOString().slice(0, 7);
 
         // Fetch all necessary data
-        const [paymentsSnap, claimsSnap, policiesSnap, usersSnap] = await Promise.all([
+        const [paymentsSnap, claimsSnap, policiesSnap, usersSnap, clientsSnap] = await Promise.all([
             get(ref(db, 'payments')),
             get(ref(db, 'claims')),
             get(ref(db, 'policies')),
-            get(ref(db, 'users'))
+            get(ref(db, 'users')),
+            get(ref(db, 'clients'))
         ]);
+
+        const agentClientIds = new Set<string>();
+        if (user.role === "AGENT" && clientsSnap.exists()) {
+            clientsSnap.forEach(child => {
+                const c = child.val();
+                if (c.agentId === user.userId || c.createdById === user.userId) {
+                    agentClientIds.add(child.key as string);
+                }
+            });
+        }
 
         const formatMonth = (isoString: string) => {
             if (!isoString) return "";
@@ -45,6 +56,11 @@ export async function GET(request: NextRequest) {
             paymentsSnap.forEach((childSnap) => {
                 const pay = childSnap.val();
                 if (pay.status === "CONFIRMED" && !pay.deletedAt) {
+                    // Filter by agent if applicable
+                    if (user.role === "AGENT" && !agentClientIds.has(pay.clientId)) {
+                        return;
+                    }
+
                     const amount = parseFloat(pay.amount) || 0;
                     totalRevenue += amount;
 
@@ -69,6 +85,11 @@ export async function GET(request: NextRequest) {
             claimsSnap.forEach((childSnap) => {
                 const claim = childSnap.val();
                 if (["APPROVED", "PAID", "COMPLETED"].includes(claim.status) && !claim.deletedAt) {
+                    // Filter by agent if applicable
+                    if (user.role === "AGENT" && !agentClientIds.has(claim.clientId)) {
+                        return;
+                    }
+
                     const amount = parseFloat(claim.approvedAmount || claim.claimAmount) || 0;
                     totalClaimsPaid += amount;
 
@@ -96,6 +117,11 @@ export async function GET(request: NextRequest) {
             policiesSnap.forEach((childSnap) => {
                 const pol = childSnap.val();
                 if (!pol.deletedAt && pol.status !== "CANCELLED") {
+                    // Filter by agent if applicable
+                    if (user.role === "AGENT" && !agentClientIds.has(pol.clientId)) {
+                        return;
+                    }
+
                     totalPoliciesCount++;
                     const polMonth = pol.createdAt?.slice(0, 7);
                     
@@ -115,10 +141,11 @@ export async function GET(request: NextRequest) {
                     planDistributionMap[plan].revenue += (parseFloat(pol.premiumAmount) || 0);
 
                     // For agents, only track performance for the TARGET month as per requirements
-                    if (pol.createdBy && isTargetMonth) {
-                        if (!agentStatsMap[pol.createdBy]) agentStatsMap[pol.createdBy] = { policies: 0, revenue: 0 };
-                        agentStatsMap[pol.createdBy].policies++;
-                        agentStatsMap[pol.createdBy].revenue += (parseFloat(pol.premiumAmount) || 0);
+                    const agentId = pol.agentId || pol.createdById || pol.createdBy;
+                    if (agentId && isTargetMonth) {
+                        if (!agentStatsMap[agentId]) agentStatsMap[agentId] = { policies: 0, revenue: 0 };
+                        agentStatsMap[agentId].policies++;
+                        agentStatsMap[agentId].revenue += (parseFloat(pol.premiumAmount) || 0);
                     }
                 }
             });

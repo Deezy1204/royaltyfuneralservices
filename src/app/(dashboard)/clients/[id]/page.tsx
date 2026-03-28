@@ -297,11 +297,10 @@ export default function ClientDetailPage() {
                                 <div className="flex items-center gap-3">
                                     <div className="text-right">
                                         <p className="text-xs text-gray-500 uppercase tracking-wide">Plan Type</p>
-                                        <Badge className={PLAN_COLORS[policy.planType]}>{policy.planType}</Badge>
-                                    </div>
-                                    <div className="text-right border-l pl-3 border-gray-200">
-                                        <p className="text-xs text-gray-500 uppercase tracking-wide">Cover Amount</p>
-                                        <p className="font-bold text-gray-900">{formatCurrency(policy.coverAmount || 0)}</p>
+                                        <div className="flex gap-1">
+                                            <Badge className={PLAN_COLORS[policy.planType]}>{policy.planType}</Badge>
+                                            <Badge variant="outline">{policy.planServiceType || "SERVICE"}</Badge>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -312,17 +311,23 @@ export default function ClientDetailPage() {
                                     <div className="p-4 space-y-3">
                                         <h4 className="text-sm font-bold text-gray-700 uppercase tracking-widest border-b pb-1">Premium Breakdown</h4>
                                         <div className="grid grid-cols-2 gap-2 text-sm">
-                                            <span className="text-gray-500">Base Premium:</span>
-                                            <span className="font-medium">{formatCurrency(policy.basePremium || 0)}</span>
+                                            {(() => {
+                                                const totalMonthly = Number(policy.premiumAmount) || 0;
+                                                const dependentsTotal = Object.values(policy.dependents || {}).reduce((acc: number, dep: any) => acc + (Number(dep.premium) || 0), 0);
+                                                const basePremium = totalMonthly - dependentsTotal;
+                                                return (
+                                                    <>
+                                                        <span className="text-gray-500">Base Premium:</span>
+                                                        <span className="font-medium">{formatCurrency(basePremium)}</span>
 
-                                            <span className="text-gray-500">Dependents Premium:</span>
-                                            <span className="font-medium">{formatCurrency(policy.dependantsPremium || 0)}</span>
+                                                        <span className="text-gray-500">Dependents Premium:</span>
+                                                        <span className="font-medium">{formatCurrency(dependentsTotal)}</span>
 
-                                            <span className="text-gray-500">Admin Fee:</span>
-                                            <span className="font-medium">{formatCurrency(policy.adminFee || 0)}</span>
-
-                                            <span className="text-gray-500 font-bold border-t pt-1 mt-1">Total Premium:</span>
-                                            <span className="font-bold text-purple-700 border-t pt-1 mt-1">{formatCurrency(policy.premiumAmount || 0)}</span>
+                                                        <span className="text-gray-500 font-bold border-t pt-1 mt-1">Total Monthly Premium:</span>
+                                                        <span className="font-bold text-purple-700 border-t pt-1 mt-1">{formatCurrency(totalMonthly)}</span>
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
 
@@ -337,9 +342,11 @@ export default function ClientDetailPage() {
                                                     <div key={depId} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded">
                                                         <div>
                                                             <p className="font-medium">{dep.firstName} {dep.lastName}</p>
-                                                            <p className="text-xs text-gray-500">{dep.relationship} • ID: {dep.idNumber}</p>
+                                                            <p className="text-xs text-gray-500">{dep.relationship} • ID: {dep.idNumber || "—"}</p>
                                                         </div>
-                                                        <span className="font-medium text-purple-600">{formatCurrency(dep.premium || 0)}</span>
+                                                        <div className="text-right">
+                                                            <p className="font-medium text-purple-600">{formatCurrency(Number(dep.premium) || 0)}</p>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -355,13 +362,13 @@ export default function ClientDetailPage() {
                                             <p className="text-sm text-gray-500 italic">No beneficiaries listed.</p>
                                         ) : (
                                             <div className="space-y-2">
-                                                {Object.entries(policy.beneficiaries).map(([benId, ben]: [string, any]) => (
-                                                    <div key={benId} className="flex justify-between items-center text-sm">
+                                                {Object.entries(policy.beneficiaries || {}).map(([benId, ben]: [string, any]) => (
+                                                    <div key={benId} className="flex justify-between items-center text-sm bg-gray-50/50 p-2 rounded border border-gray-100">
                                                         <div>
-                                                            <p className="font-medium">{ben.firstName} {ben.lastName} <span className="text-xs text-gray-500">({ben.relationship})</span></p>
-                                                            <p className="text-xs text-gray-500">{ben.phone} • ID: {ben.idNumber}</p>
+                                                            <p className="font-medium text-gray-900">{ben.firstName} {ben.lastName} <span className="text-xs text-gray-500 font-normal">({ben.relationship})</span></p>
+                                                            <p className="text-xs text-gray-500">{ben.phone || ben.idNumber || "No contact info"}</p>
                                                         </div>
-                                                        <Badge variant="outline">{ben.allocation}%</Badge>
+                                                        <Badge variant="outline" className="text-[10px] uppercase tracking-tighter bg-white">Beneficiary</Badge>
                                                     </div>
                                                 ))}
                                             </div>

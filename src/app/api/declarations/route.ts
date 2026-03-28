@@ -18,7 +18,14 @@ export async function GET(req: NextRequest) {
 
         if (snapshot.exists()) {
             snapshot.forEach((childSnapshot) => {
-                declarations.push({ id: childSnapshot.key, ...childSnapshot.val() });
+                const dec = childSnapshot.val();
+                if (user.role === "AGENT") {
+                    if (dec.createdById === user.userId || dec.agentId === user.userId) {
+                        declarations.push({ id: childSnapshot.key, ...dec });
+                    }
+                } else {
+                    declarations.push({ id: childSnapshot.key, ...dec });
+                }
             });
         }
 

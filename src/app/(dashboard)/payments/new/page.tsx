@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Search, AlertCircle, CheckCircle, User, DollarSign, Coins } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import ReactSelect from "react-select";
+import { SignatureSelector } from "@/components/SignatureSelector";
 
 // Convert number to words
 function numberToWords(amount: number, currency: string = "ZAR"): string {
@@ -88,7 +89,21 @@ function NewPaymentContent() {
         notes: "",
     });
 
+    const [adminSignature, setAdminSignature] = useState<string | null>(null);
+    const [clientSignature, setClientSignature] = useState<string | null>(null);
+
     const amountInWords = numberToWords(parseFloat(form.amount) || 0, form.currency);
+
+    // Load current user for "Received By"
+    useEffect(() => {
+        fetch("/api/auth/me")
+            .then(r => r.json())
+            .then(d => {
+                if (d.user) {
+                    setForm(p => ({ ...p, receivedBy: `${d.user.firstName} ${d.user.lastName}` }));
+                }
+            }).catch(() => { });
+    }, []);
 
     // Load client from URL param
     useEffect(() => {
@@ -166,6 +181,8 @@ function NewPaymentContent() {
                 receivedBy: form.receivedBy,
                 notes: form.notes,
                 amountInWords,
+                adminSignature,
+                clientSignature,
                 status: "CONFIRMED",
             };
             const res = await fetch("/api/payments", {
@@ -222,7 +239,8 @@ function NewPaymentContent() {
                         <div className="text-center space-y-1 border-b pb-4 mb-4">
                             <h2 className="text-xl font-bold text-purple-800">ROYALTY FUNERAL SERVICES</h2>
                             <p className="text-sm text-gray-600">Premium Funeral Cover Provider</p>
-                            <p className="text-xs text-gray-500">Tel: 011 000 0000 | Email: info@royaltyfunerals.co.za</p>
+                            <p className="text-xs text-gray-500">Phones: +263 71 787 4750 / +263 71 787 4747 | Email: info@royaltyfuneral.co.za</p>
+                            <p className="text-xs text-gray-500">Stand 15383 Khami Road Kelvin North, Bulawayo</p>
                         </div>
                         <h3 className="text-center font-semibold text-gray-800 uppercase tracking-wide">PAYMENT RECEIPT</h3>
                     </CardContent>
@@ -429,6 +447,18 @@ function NewPaymentContent() {
                         />
                     </CardContent>
                 </Card>
+
+                {/* Signatures */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <SignatureSelector 
+                        label="Received By Signature" 
+                        onSignatureChange={setAdminSignature} 
+                    />
+                    <SignatureSelector 
+                        label="Client Signature" 
+                        onSignatureChange={setClientSignature} 
+                    />
+                </div>
 
                 {/* Summary */}
                 {selectedClient && form.amount && (

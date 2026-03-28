@@ -128,7 +128,9 @@ export async function PUT(
           city: existing.clientCity,
           postalCode: existing.clientPostalCode,
           createdAt: new Date().toISOString(),
-          isActive: true
+          isActive: true,
+          agentId: existing.agentId || null,
+          createdById: existing.createdBy || null
         };
         const newClientRef = push(ref(db, 'clients'));
         await set(newClientRef, sanitizeForFirebase(newClient));
@@ -143,7 +145,7 @@ export async function PUT(
         clientId,
         policyType: existing.policyType,
         planType: existing.planType,
-        coverAmount: existing.proposedCover,
+        planServiceType: existing.planServiceType || "SERVICE",
         premiumAmount: existing.proposedPremium,
         inceptionDate: now.toISOString(),
         effectiveDate: now.toISOString(),
@@ -153,7 +155,9 @@ export async function PUT(
         paymentFrequency: existing.paymentFrequency,
         paymentMethod: existing.paymentMethod,
         debitOrderDay: existing.debitOrderDay,
-        createdAt: now.toISOString()
+        createdAt: now.toISOString(),
+        agentId: existing.agentId || null,
+        createdById: existing.createdBy || null
       };
 
       const newPolicyRef = push(ref(db, 'policies'));
@@ -191,12 +195,28 @@ export async function PUT(
 
         await update(newPolicyRef, sanitizeForFirebase({ dependents: depsMap }));
       }
+
+      // Beneficiaries
+      if (existing.beneficiariesData) {
+        const beneficiaries = JSON.parse(existing.beneficiariesData);
+        const bensMap: Record<string, any> = {};
+        beneficiaries.forEach((ben: any, idx: number) => {
+          const benId = `ben_${now.getTime()}_${idx}`;
+          bensMap[benId] = {
+            ...ben,
+            policyId,
+            clientId,
+            allocation: ben.proportion || ben.allocation || 100 // Fallback or handle null
+          };
+        });
+        await update(newPolicyRef, sanitizeForFirebase({ beneficiaries: bensMap }));
+      }
     }
 
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.policyType) updateData.policyType = body.policyType;
+    if (body.planServiceType) updateData.planServiceType = body.planServiceType;
     if (body.planType) updateData.planType = body.planType;
-    if (body.proposedCover) updateData.proposedCover = parseFloat(body.proposedCover);
     if (body.proposedPremium) updateData.proposedPremium = parseFloat(body.proposedPremium);
 
     await update(propRef, sanitizeForFirebase(updateData));

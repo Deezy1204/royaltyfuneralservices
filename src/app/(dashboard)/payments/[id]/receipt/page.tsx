@@ -76,9 +76,9 @@ export default function ReceiptPage() {
 
                         <div className="relative z-10 text-right text-sm text-gray-600">
                             <p className="font-semibold text-gray-900">Contact Information</p>
-                            <p>Phone: 011 123 4567</p>
+                            <p>Phone: +263 71 787 4750 / +263 71 787 4747</p>
                             <p>Email: info@royaltyfuneral.co.za</p>
-                            <p className="max-w-[150px] ml-auto">123 Main Street, Johannesburg, 2000</p>
+                            <p className="max-w-[150px] ml-auto">Stand 15383 Khami Road Kelvin North, Bulawayo</p>
                         </div>
                     </div>
 
@@ -167,11 +167,19 @@ export default function ReceiptPage() {
                         <div className="pt-8 border-t border-gray-100 text-center space-y-4 print:pt-4 print:space-y-2">
                             <div className="flex justify-center gap-12">
                                 <div className="space-y-1">
-                                    <div className="h-12 w-48 border-b border-gray-300 mx-auto print:h-8"></div>
+                                    {payment.clientSignature ? (
+                                        <img src={payment.clientSignature} alt="Customer Signature" className="h-12 object-contain mx-auto print:h-10" />
+                                    ) : (
+                                        <div className="h-12 w-48 border-b border-gray-300 mx-auto print:h-8"></div>
+                                    )}
                                     <p className="text-[10px] text-gray-400 uppercase font-bold">Customer Signature</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <div className="h-12 w-48 border-b border-gray-300 mx-auto print:h-8"></div>
+                                    {payment.adminSignature ? (
+                                        <img src={payment.adminSignature} alt="Company Officer Signature" className="h-12 object-contain mx-auto print:h-10" />
+                                    ) : (
+                                        <div className="h-12 w-48 border-b border-gray-300 mx-auto print:h-8"></div>
+                                    )}
                                     <p className="text-[10px] text-gray-400 uppercase font-bold">Company Officer</p>
                                 </div>
                             </div>

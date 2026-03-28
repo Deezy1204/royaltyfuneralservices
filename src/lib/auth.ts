@@ -212,7 +212,7 @@ export const PERMISSIONS: Record<string, Record<string, string[]>> = {
     alterations: ["create", "read"],
     payments: ["read"],
     claims: ["read"],
-    reports: [],
+    reports: ["read"],
     users: [],
     settings: [],
   },

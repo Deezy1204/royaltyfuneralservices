@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DashboardStats {
   totalClients: number;
@@ -29,7 +30,6 @@ interface DashboardStats {
   pendingClaims: number;
   pendingAlterations: number;
   monthlyRevenue: number;
-  totalArrears: number;
   claimsPaid: number;
   policiesByPlan: { plan: string; count: number }[];
   paymentsByMethod: { method: string; count: number }[];
@@ -46,7 +46,6 @@ const emptyStats: DashboardStats = {
   pendingClaims: 0,
   pendingAlterations: 0,
   monthlyRevenue: 0,
-  totalArrears: 0,
   claimsPaid: 0,
   policiesByPlan: [],
   paymentsByMethod: [],
@@ -120,14 +119,6 @@ const pendingCards = [
     color: "text-blue-600",
     href: "/alterations?status=pending",
   },
-  {
-    title: "Total Arrears",
-    key: "totalArrears" as const,
-    icon: TrendingUp,
-    color: "text-red-600",
-    href: "/payments?filter=arrears",
-    isCurrency: true,
-  },
 ];
 
 const planColors: Record<string, string> = {
@@ -146,6 +137,7 @@ const activityIcons: Record<string, typeof FileText> = {
 };
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>(emptyStats);
   const [loading, setLoading] = useState(true);
 
@@ -166,6 +158,17 @@ export default function DashboardPage() {
     fetchStats();
   }, []);
 
+  const getDashboardTitle = () => {
+    if (!user) return "Admin Dashboard";
+    switch (user.role) {
+      case "AGENT": return "Agent Dashboard";
+      case "DIRECTOR": return "Director Dashboard";
+      case "SUPER_ADMIN": return "Super Admin Dashboard";
+      case "ADMIN": return "Admin Dashboard";
+      default: return `${user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase()} Dashboard`;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
@@ -173,9 +176,13 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Welcome to Royalty Funeral Services</h1>
-            <p className="mt-1 text-gray-500">
-              Admin Dashboard - {formatDate(new Date())}
+            <p className="mt-1 text-gray-500 font-medium">
+              {getDashboardTitle()} - {formatDate(new Date())}
             </p>
+            <div className="mt-2 text-xs text-gray-400 space-y-0.5">
+              <p>Phones: +263 71 787 4750 / +263 71 787 4747</p>
+              <p>Address: Stand 15383 Khami Road Kelvin North, Bulawayo</p>
+            </div>
           </div>
           <Image
             src="/images/logo.png"
@@ -189,23 +196,30 @@ export default function DashboardPage() {
 
       {/* Main Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((card) => (
-          <Link key={card.title} href={card.href}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        {statCards
+          .filter(card => {
+            if (user?.role === 'AGENT') {
+              return card.key !== 'monthlyRevenue' && card.key !== 'totalClaims';
+            }
+            return true;
+          })
+          .map((card) => (
+            <Link key={card.title} href={card.href}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-500">{card.title}</p>
-                    <p className="mt-1 text-2xl font-bold text-gray-900">
+                    <p className="mt-1 text-2xl font-bold text-gray-900 flex items-baseline gap-2">
                       {card.isCurrency
                         ? formatCurrency(stats[card.key] as number)
                         : stats[card.key].toLocaleString()}
+                      {card.subKey && (
+                        <span className="text-xs font-normal text-gray-400">
+                          of {stats[card.subKey].toLocaleString()} total
+                        </span>
+                      )}
                     </p>
-                    {card.subKey && (
-                      <p className="mt-1 text-xs text-gray-400">
-                        of {stats[card.subKey].toLocaleString()} total
-                      </p>
-                    )}
                   </div>
                   <div className={`rounded-full p-3 ${card.bgColor}`}>
                     <card.icon className={`h-6 w-6 ${card.color}`} />
@@ -235,9 +249,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="text-sm font-medium text-gray-900">{card.title}</p>
                         <p className="text-lg font-bold text-gray-900">
-                          {card.isCurrency
-                            ? formatCurrency(stats[card.key] as number)
-                            : stats[card.key]}
+                          {stats[card.key].toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -280,51 +292,53 @@ export default function DashboardPage() {
       </div>
 
       {/* Analytics Row */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Methods Popularity</CardTitle>
-            <CardDescription>Distribution of confirmed payments</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.paymentsByMethod.length > 0 ? (
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats.paymentsByMethod}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={5}
-                      dataKey="count"
-                      nameKey="method"
-                      label={({ name, percent }) => `${(name || "").replace("_", " ")} ${(((percent || 0) * 100).toFixed(0))}%`}
-                    >
-                      {stats.paymentsByMethod.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={PAYMENT_METHOD_COLORS[entry.method] || "#94a3b8"} 
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: any) => [value, "Payments"]}
-                      labelFormatter={(label: any) => String(label || "").replace("_", " ")}
-                    />
-                    <Legend formatter={(value) => String(value || "").replace("_", " ")} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-               <div className="h-[300px] flex items-center justify-center text-gray-500 italic">
-                 No payment data available
-               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {!isAgent && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Methods Popularity</CardTitle>
+              <CardDescription>Distribution of confirmed payments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stats.paymentsByMethod.length > 0 ? (
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.paymentsByMethod}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="count"
+                        nameKey="method"
+                        label={({ name, percent }) => `${(name || "").replace("_", " ")} ${(((percent || 0) * 100).toFixed(0))}%`}
+                      >
+                        {stats.paymentsByMethod.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={PAYMENT_METHOD_COLORS[entry.method] || "#94a3b8"} 
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: any) => [value, "Payments"]}
+                        labelFormatter={(label: any) => String(label || "").replace("_", " ")}
+                      />
+                      <Legend formatter={(value) => String(value || "").replace("_", " ")} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-gray-500 italic">
+                  No payment data available
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
         {/* Quick Actions removed */}
     </div>

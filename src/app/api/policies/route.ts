@@ -1,10 +1,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { ref, get, child } from "firebase/database";
+import { ref, get } from "firebase/database";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
     try {
+        const user = await getCurrentUser();
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const searchParams = request.nextUrl.searchParams;
         const limit = parseInt(searchParams.get("limit") || "10");
         const query = searchParams.get("query") || "";
@@ -29,6 +35,10 @@ export async function GET(request: NextRequest) {
             policiesSnap.forEach(p => {
                 const policy = p.val();
                 if (!policy.deletedAt) {
+                    // Filter by agent if applicable
+                    if (user.role === "AGENT" && policy.agentId !== user.userId && policy.createdById !== user.userId) {
+                        return;
+                    }
                     const client = clientsMap[policy.clientId];
                     if (client) {
                         policies.push({

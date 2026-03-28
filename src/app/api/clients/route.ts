@@ -34,8 +34,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Filter by deletion (soft delete check if applicable, though our seed didn't put deletedAt)
+    // Filter by deletion (soft delete check if applicable)
     clients = clients.filter(c => !c.deletedAt);
+
+    // Filter by agent if applicable
+    if (user.role === "AGENT") {
+      clients = clients.filter(c => c.agentId === user.userId || c.createdById === user.userId);
+    }
 
     // Apply Search
     if (search) {
