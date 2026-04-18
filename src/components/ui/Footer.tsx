@@ -39,8 +39,8 @@ export default function Footer() {
           <h4 className="text-white font-semibold mb-6">Contact</h4>
           <ul className="space-y-4 text-sm text-gray-400">
             <li className="flex flex-col gap-1">
-              <span className="flex items-center gap-2"><MapPin size={16} /> Locations in</span>
-              <span className="pl-6">South Africa & Zimbabwe</span>
+              <span className="flex items-center gap-2"><MapPin size={16} /> Address:</span>
+              <span className="pl-6">Stand 15383, Khami Road Kelvin North 11, Bulawayo</span>
             </li>
             <li className="flex items-center gap-2">
               <Phone size={16} />
@@ -48,7 +48,7 @@ export default function Footer() {
             </li>
             <li className="flex items-center gap-2">
               <Mail size={16} />
-              <a href="mailto:info@royaltyfunerals.co.za" className="hover:text-purple-400 transition-colors">info@royaltyfunerals.co.za</a>
+              <a href="mailto:sales@royaltyfuneral.com" className="hover:text-purple-400 transition-colors">sales@royaltyfuneral.com</a>
             </li>
           </ul>
         </div>

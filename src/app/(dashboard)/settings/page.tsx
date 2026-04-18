@@ -13,50 +13,109 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, PLAN_COLORS } from "@/lib/utils";
 import { Building2, Save, Shield, Bell, FileText, CreditCard, User, X } from "lucide-react";
 
 import { toast } from "sonner";
 import { SignatureSelector } from "@/components/SignatureSelector";
 
 const DEFAULT_PLANS = {
-  WHITE: {
-    name: "Royalty White",
-    cover: 15000,
-    dependentPremium: 3,
-    options: [
-      { id: "white_single", name: "Single life (1 person)", premium: 6, maxPeople: 1 },
-      { id: "white_family", name: "Family (5 people)", premium: 10, maxPeople: 5 }
+  BASIC: {
+    name: "Basic Policy",
+    benefits: ["Repatriation up to 600km"],
+    cashBenefit: 450,
+    ageTiers: [
+      {
+        label: "18 - 64",
+        minAge: 18,
+        maxAge: 64,
+        options: { SINGLE: 2.5, MEMBER_SPOUSE: 3, FAMILY: 3.5, EXTENDED_FAMILY: 3.5 },
+        dependents: { CHILD: 3 }
+      }
+    ]
+  },
+  BRONZE: {
+    name: "Bronze Policy",
+    benefits: ["1 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Repatriation (Over 600km)"],
+    cashBenefit: 450,
+    ageTiers: [
+      {
+        label: "18 - 64",
+        minAge: 18,
+        maxAge: 64,
+        options: { SINGLE: 3.5, MEMBER_SPOUSE: 5, FAMILY: 5.5, EXTENDED_FAMILY: 1.5 },
+        dependents: { CHILD: 4 }
+      },
+      {
+        label: "65 - 74",
+        minAge: 65,
+        maxAge: 74,
+        options: { SINGLE: 4, MEMBER_SPOUSE: 6, FAMILY: 7, EXTENDED_FAMILY: 3 },
+        dependents: { CHILD: 5 }
+      },
+      {
+        label: "75 - 84",
+        minAge: 75,
+        maxAge: 84,
+        options: { SINGLE: 11, MEMBER_SPOUSE: 8.5, FAMILY: 0, EXTENDED_FAMILY: 11 },
+        dependents: { CHILD: 0 }
+      }
+    ]
+  },
+  SILVER: {
+    name: "Royalty Silver",
+    benefits: ["1 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Airtime", "Repatriation (Over 600km)"],
+    cashBenefit: 550,
+    ageTiers: [
+      {
+        label: "18 - 64",
+        minAge: 18,
+        maxAge: 64,
+        options: { SINGLE: 3.5, MEMBER_SPOUSE: 6, FAMILY: 8.5, EXTENDED_FAMILY: 2 },
+        dependents: { CHILD: 5 }
+      },
+      {
+        label: "65 - 74",
+        minAge: 65,
+        maxAge: 74,
+        options: { SINGLE: 4.5, MEMBER_SPOUSE: 7.5, FAMILY: 9.5, EXTENDED_FAMILY: 4.5 },
+        dependents: { CHILD: 6 }
+      },
+      {
+        label: "75 - 84",
+        minAge: 75,
+        maxAge: 84,
+        options: { SINGLE: 11.5, MEMBER_SPOUSE: 9, FAMILY: 0, EXTENDED_FAMILY: 12 },
+        dependents: { CHILD: 0 }
+      }
     ]
   },
   GOLD: {
     name: "Royalty Gold",
-    cover: 25000,
-    dependentPremium: 4,
-    options: [
-      { id: "gold_single", name: "Single life (1 person)", premium: 8, maxPeople: 1 },
-      { id: "gold_family", name: "Family (5 people)", premium: 12, maxPeople: 5 },
-      { id: "gold_royalty10", name: "Royalty 10 (10 people)", premium: 20, maxPeople: 10 },
-      { id: "gold_royalty12", name: "Royalty 12 (12 people)", premium: 25, maxPeople: 12 }
-    ]
-  },
-  BLUE: {
-    name: "Royalty Blue",
-    cover: 35000,
-    dependentPremium: 5,
-    options: [
-      { id: "blue_single", name: "Single life (1 person)", premium: 12, maxPeople: 1 },
-      { id: "blue_family", name: "Family (5 people)", premium: 15, maxPeople: 5 },
-      { id: "blue_group", name: "Group", premium: 20, maxPeople: 10 }
-    ]
-  },
-  PURPLE: {
-    name: "Royalty Purple",
-    cover: 50000,
-    dependentPremium: 6,
-    options: [
-      { id: "purple_single", name: "Single life (1 person)", premium: 15, maxPeople: 1 },
-      { id: "purple_family", name: "Family (5 people)", premium: 20, maxPeople: 5 }
+    benefits: ["3 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Airtime", "Repatriation (Over 600km)"],
+    cashBenefit: 700,
+    ageTiers: [
+      {
+        label: "18 - 64",
+        minAge: 18,
+        maxAge: 64,
+        options: { SINGLE: 5.5, MEMBER_SPOUSE: 10.5, FAMILY: 11.5, EXTENDED_FAMILY: 10.5 },
+        dependents: { CHILD: 9.5 }
+      },
+      {
+        label: "65 - 74",
+        minAge: 65,
+        maxAge: 74,
+        options: { SINGLE: 8, MEMBER_SPOUSE: 23.5, FAMILY: 0, EXTENDED_FAMILY: 11.5 },
+        dependents: { CHILD: 0 }
+      },
+      {
+        label: "75 - 84",
+        minAge: 75,
+        maxAge: 84,
+        options: { SINGLE: 8.5, MEMBER_SPOUSE: 47, FAMILY: 0, EXTENDED_FAMILY: 12 },
+        dependents: { CHILD: 0 }
+      }
     ]
   },
   OPTIONAL_BENEFITS: {
@@ -84,11 +143,17 @@ export default function SettingsPage() {
     fetch("/api/plans")
         .then(res => res.json())
         .then(data => {
-            if (!data.plans || Object.keys(data.plans).length === 0) {
-                setPlans(DEFAULT_PLANS);
-            } else {
-                setPlans(data.plans);
-            }
+            const plansFromDb = data.plans || {};
+            const finalPlans = { ...DEFAULT_PLANS } as any;
+            
+            // Migrate/Merge logic: Only use DB plan if it has the new tiered structure
+            Object.keys(plansFromDb).forEach(key => {
+                if (plansFromDb[key] && plansFromDb[key].ageTiers) {
+                    finalPlans[key] = plansFromDb[key];
+                }
+            });
+
+            setPlans(finalPlans);
         })
         .catch(console.error);
 
@@ -275,59 +340,96 @@ export default function SettingsPage() {
               ) : (
                 <div className="space-y-8">
                   {/* Base Plans Configuration */}
-                  {["WHITE", "GOLD", "BLUE", "PURPLE"].map((planKey) => {
+                  {["BASIC", "BRONZE", "SILVER", "GOLD"].map((planKey) => {
                     const planConfig = plans[planKey];
                     if (!planConfig) return null;
                     return (
-                      <div key={planKey} className="border rounded-lg p-4 bg-gray-50">
-                        <div className="flex items-center gap-3 mb-4">
-                          <Badge variant={planKey.toLowerCase() as any}>{planKey}</Badge>
-                          <span className="font-semibold text-lg">{planConfig.name}</span>
-                        </div>
-                        <div className="grid gap-4 sm:grid-cols-1 mb-6">
-                            <Input 
-                                label="Added Dependent Premium ($)" 
+                      <div key={planKey} className="border rounded-lg p-6 bg-gray-50 space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Badge className={PLAN_COLORS[planKey]}>{planKey}</Badge>
+                            <h3 className="text-xl font-bold text-gray-900">{planConfig.name}</h3>
+                          </div>
+                          <div className="text-right">
+                             <p className="text-sm font-medium text-gray-500">Cash Benefit</p>
+                             <Input 
                                 type="number" 
-                                value={planConfig.dependentPremium} 
-                                onChange={(e) => setPlans({...plans, [planKey]: {...planConfig, dependentPremium: Number(e.target.value)}})} 
-                            />
+                                className="w-32 text-right font-bold"
+                                value={planConfig.cashBenefit} 
+                                onChange={(e) => setPlans({...plans, [planKey]: {...planConfig, cashBenefit: Number(e.target.value)}})} 
+                             />
+                          </div>
                         </div>
-                        
-                        <div className="space-y-3">
-                            <h4 className="text-sm font-semibold text-gray-700">Plan Options (Single, Family, etc)</h4>
-                            {planConfig.options.map((opt: any, idx: number) => (
-                                <div key={opt.id} className="grid gap-3 sm:grid-cols-3 bg-white p-3 border rounded">
-                                    <Input 
-                                        label="Option Name" 
-                                        value={opt.name} 
-                                        onChange={(e) => {
-                                            const newOps = [...planConfig.options];
-                                            newOps[idx].name = e.target.value;
-                                            setPlans({...plans, [planKey]: {...planConfig, options: newOps}});
-                                        }} 
-                                    />
-                                    <Input 
-                                        label="Premium ($)" 
-                                        type="number" 
-                                        value={opt.premium} 
-                                        onChange={(e) => {
-                                            const newOps = [...planConfig.options];
-                                            newOps[idx].premium = Number(e.target.value);
-                                            setPlans({...plans, [planKey]: {...planConfig, options: newOps}});
-                                        }} 
-                                    />
-                                    <Input 
-                                        label="Max Covered People" 
-                                        type="number" 
-                                        value={opt.maxPeople} 
-                                        onChange={(e) => {
-                                            const newOps = [...planConfig.options];
-                                            newOps[idx].maxPeople = Number(e.target.value);
-                                            setPlans({...plans, [planKey]: {...planConfig, options: newOps}});
-                                        }} 
-                                    />
+
+                        <div className="grid gap-6">
+                          {planConfig.ageTiers?.map((tier: any, tierIdx: number) => (
+                            <div key={tierIdx} className="bg-white rounded-lg border p-4 space-y-4 shadow-sm">
+                              <div className="flex items-center justify-between border-b pb-2">
+                                <h4 className="font-bold text-purple-700">{tier.label} Age Group</h4>
+                                <div className="flex gap-2 text-xs text-gray-500">
+                                  <span>Min: {tier.minAge}</span>
+                                  <span>Max: {tier.maxAge}</span>
                                 </div>
-                            ))}
+                              </div>
+                              
+                              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                {tier.options && Object.keys(tier.options).map((optKey) => (
+                                  <div key={optKey} className="space-y-1">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase">{optKey.replace('_', ' ')}</label>
+                                    <Input 
+                                      type="number"
+                                      value={tier.options[optKey]}
+                                      onChange={(e) => {
+                                        const newTiers = [...planConfig.ageTiers];
+                                        newTiers[tierIdx].options[optKey] = Number(e.target.value);
+                                        setPlans({...plans, [planKey]: {...planConfig, ageTiers: newTiers}});
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="pt-2 flex items-center gap-4 border-t">
+                                <div className="flex-1">
+                                  <label className="text-xs font-semibold text-gray-500 uppercase">Child Premium (Added Dependent)</label>
+                                  <Input 
+                                    type="number"
+                                    value={tier.dependents?.CHILD}
+                                    onChange={(e) => {
+                                      const newTiers = [...planConfig.ageTiers];
+                                      newTiers[tierIdx].dependents.CHILD = Number(e.target.value);
+                                      setPlans({...plans, [planKey]: {...planConfig, ageTiers: newTiers}});
+                                    }}
+                                  />
+                                </div>
+                                {tier.dependents?.EXTENDED !== undefined && (
+                                  <div className="flex-1">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase">Extended Premium (Added Dependent)</label>
+                                    <Input 
+                                      type="number"
+                                      value={tier.dependents.EXTENDED}
+                                      onChange={(e) => {
+                                        const newTiers = [...planConfig.ageTiers];
+                                        newTiers[tierIdx].dependents.EXTENDED = Number(e.target.value);
+                                        setPlans({...plans, [planKey]: {...planConfig, ageTiers: newTiers}});
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold text-gray-700">Policy Benefits (One per line)</label>
+                          <textarea 
+                            className="w-full min-h-[100px] rounded-md border border-gray-300 p-3 text-sm"
+                            value={planConfig.benefits?.join('\n') || ''}
+                            onChange={(e) => {
+                              setPlans({...plans, [planKey]: {...planConfig, benefits: e.target.value.split('\n')}});
+                            }}
+                          />
                         </div>
                       </div>
                     );

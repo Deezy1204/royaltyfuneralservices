@@ -2,7 +2,7 @@ export type UserRole = "DIRECTOR" | "ADMIN" | "MANAGER" | "AGENT" | "ACCOUNTS" |
 
 export type PolicyStatus = "PENDING" | "ACTIVE" | "LAPSED" | "CANCELLED" | "EXPIRED" | "CLAIMED";
 
-export type PlanType = "WHITE" | "GOLD" | "BLUE" | "PURPLE";
+export type PlanType = "BASIC" | "BRONZE" | "SILVER" | "GOLD";
 
 export type PolicyType = "INDIVIDUAL" | "FAMILY";
 
@@ -145,28 +145,29 @@ export interface Dependent {
   isActive: boolean;
 }
 
+export interface TierOptions {
+  SINGLE: number;
+  MEMBER_SPOUSE: number;
+  FAMILY: number;
+  EXTENDED_FAMILY: number;
+}
+
+export interface AgeTier {
+  label: string;
+  minAge: number;
+  maxAge: number;
+  options: TierOptions;
+  dependents: {
+    CHILD: number;
+    EXTENDED?: number;
+  };
+}
+
 export interface PlanConfig {
-  id: string;
-  planType: PlanType;
-  displayName: string;
-  description?: string;
-  principalCover: number;
-  spouseCover: number;
-  childCover: number;
-  parentCover: number;
-  extendedCover: number;
-  basePremium: number;
-  spousePremium: number;
-  childPremium: number;
-  parentPremium: number;
-  extendedPremium: number;
-  maxDependents: number;
-  maxParents: number;
-  maxExtended: number;
-  naturalDeathWaiting: number;
-  accidentalDeathWaiting: number;
-  features?: string[];
-  isActive: boolean;
+  name: string;
+  ageTiers: AgeTier[];
+  benefits: string[];
+  cashBenefit: number;
 }
 
 export interface DashboardStats {

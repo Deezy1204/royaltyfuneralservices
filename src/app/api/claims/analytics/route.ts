@@ -52,9 +52,10 @@ export async function GET() {
       analytics.byMonth[month].submitted++;
       analytics.byYear[year].submitted++;
 
-      // Paid Count & Amount
-      if (claim.status === "PAID" && claim.paidAt) {
-        const paidDate = new Date(claim.paidAt);
+      // Paid Count & Amount - Modified to include all PAID claims
+      if (claim.status === "PAID") {
+        const pDateStr = claim.paidAt || claim.createdAt;
+        const paidDate = new Date(pDateStr);
         const pDay = format(paidDate, "yyyy-MM-dd");
         const pWeek = format(startOfWeek(paidDate), "yyyy-MM-dd");
         const pMonth = format(startOfMonth(paidDate), "yyyy-MM");
@@ -70,7 +71,7 @@ export async function GET() {
         analytics.byMonth[pMonth].paid++;
         analytics.byYear[pYear].paid++;
 
-        const amt = claim.approvedAmount || 0;
+        const amt = parseFloat(claim.approvedAmount || claim.claimAmount || 0);
         analytics.byDay[pDay].amount += amt;
         analytics.byWeek[pWeek].amount += amt;
         analytics.byMonth[pMonth].amount += amt;

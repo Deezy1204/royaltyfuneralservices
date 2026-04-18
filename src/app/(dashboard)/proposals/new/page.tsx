@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency, PLAN_COLORS } from "@/lib/utils";
+import { formatCurrency, PLAN_COLORS, calculateAge } from "@/lib/utils";
 import {
   ArrowLeft,
   Save,
@@ -27,46 +27,107 @@ import {
   Users,
   Plus,
   Trash2,
+  CheckCircle,
 } from "lucide-react";
+import { SignatureSelector } from "@/components/SignatureSelector";
 
 const DEFAULT_PLANS = {
-  WHITE: {
-    name: "Royalty White",
-    cover: 15000,
-    dependentPremium: 3,
-    options: [
-      { id: "white_single", name: "Single life (1 person)", premium: 6, maxPeople: 1 },
-      { id: "white_family", name: "Family (5 people)", premium: 10, maxPeople: 5 }
+  BASIC: {
+    name: "Basic Policy",
+    benefits: ["Repatriation up to 600km"],
+    cashBenefit: 450,
+    ageTiers: [
+      {
+        label: "18 - 64",
+        minAge: 18,
+        maxAge: 64,
+        options: { SINGLE: 2.5, MEMBER_SPOUSE: 3, FAMILY: 3.5, EXTENDED_FAMILY: 3.5 },
+        dependents: { CHILD: 3 }
+      }
+    ]
+  },
+  BRONZE: {
+    name: "Bronze Policy",
+    benefits: ["1 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Repatriation (Over 600km)"],
+    cashBenefit: 450,
+    ageTiers: [
+      {
+        label: "18 - 64",
+        minAge: 18,
+        maxAge: 64,
+        options: { SINGLE: 3.5, MEMBER_SPOUSE: 5, FAMILY: 5.5, EXTENDED_FAMILY: 1.5 },
+        dependents: { CHILD: 4 }
+      },
+      {
+        label: "65 - 74",
+        minAge: 65,
+        maxAge: 74,
+        options: { SINGLE: 4, MEMBER_SPOUSE: 6, FAMILY: 7, EXTENDED_FAMILY: 3 },
+        dependents: { CHILD: 5 }
+      },
+      {
+        label: "75 - 84",
+        minAge: 75,
+        maxAge: 84, // Capped at 84 as per user req
+        options: { SINGLE: 11, MEMBER_SPOUSE: 8.5, FAMILY: 0, EXTENDED_FAMILY: 11 },
+        dependents: { CHILD: 0 }
+      }
+    ]
+  },
+  SILVER: {
+    name: "Royalty Silver",
+    benefits: ["1 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Airtime", "Repatriation (Over 600km)"],
+    cashBenefit: 550,
+    ageTiers: [
+      {
+        label: "18 - 64",
+        minAge: 18,
+        maxAge: 64,
+        options: { SINGLE: 3.5, MEMBER_SPOUSE: 6, FAMILY: 8.5, EXTENDED_FAMILY: 2 },
+        dependents: { CHILD: 5 }
+      },
+      {
+        label: "65 - 74",
+        minAge: 65,
+        maxAge: 74,
+        options: { SINGLE: 4.5, MEMBER_SPOUSE: 7.5, FAMILY: 9.5, EXTENDED_FAMILY: 4.5 },
+        dependents: { CHILD: 6 }
+      },
+      {
+        label: "75 - 84",
+        minAge: 75,
+        maxAge: 84,
+        options: { SINGLE: 11.5, MEMBER_SPOUSE: 9, FAMILY: 0, EXTENDED_FAMILY: 12 },
+        dependents: { CHILD: 0 }
+      }
     ]
   },
   GOLD: {
     name: "Royalty Gold",
-    cover: 25000,
-    dependentPremium: 4,
-    options: [
-      { id: "gold_single", name: "Single life (1 person)", premium: 8, maxPeople: 1 },
-      { id: "gold_family", name: "Family (5 people)", premium: 12, maxPeople: 5 },
-      { id: "gold_royalty10", name: "Royalty 10 (10 people)", premium: 20, maxPeople: 10 },
-      { id: "gold_royalty12", name: "Royalty 12 (12 people)", premium: 25, maxPeople: 12 }
-    ]
-  },
-  BLUE: {
-    name: "Royalty Blue",
-    cover: 35000,
-    dependentPremium: 5,
-    options: [
-      { id: "blue_single", name: "Single life (1 person)", premium: 12, maxPeople: 1 },
-      { id: "blue_family", name: "Family (5 people)", premium: 15, maxPeople: 5 },
-      { id: "blue_group", name: "Group", premium: 20, maxPeople: 10 }
-    ]
-  },
-  PURPLE: {
-    name: "Royalty Purple",
-    cover: 50000,
-    dependentPremium: 6,
-    options: [
-      { id: "purple_single", name: "Single life (1 person)", premium: 15, maxPeople: 1 },
-      { id: "purple_family", name: "Family (5 people)", premium: 20, maxPeople: 5 }
+    benefits: ["3 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Airtime", "Repatriation (Over 600km)"],
+    cashBenefit: 700,
+    ageTiers: [
+      {
+        label: "18 - 64",
+        minAge: 18,
+        maxAge: 64,
+        options: { SINGLE: 5.5, MEMBER_SPOUSE: 10.5, FAMILY: 11.5, EXTENDED_FAMILY: 10.5 },
+        dependents: { CHILD: 9.5 }
+      },
+      {
+        label: "65 - 74",
+        minAge: 65,
+        maxAge: 74,
+        options: { SINGLE: 8, MEMBER_SPOUSE: 23.5, FAMILY: 0, EXTENDED_FAMILY: 11.5 },
+        dependents: { CHILD: 0 }
+      },
+      {
+        label: "75 - 84",
+        minAge: 75,
+        maxAge: 84,
+        options: { SINGLE: 8.5, MEMBER_SPOUSE: 47, FAMILY: 0, EXTENDED_FAMILY: 12 },
+        dependents: { CHILD: 0 }
+      }
     ]
   },
   OPTIONAL_BENEFITS: {
@@ -119,6 +180,19 @@ function NewProposalContent() {
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [dbPlans, setDbPlans] = useState<any>(null);
+  const [selectedTierLabel, setSelectedTierLabel] = useState<string | null>(null);
+
+  // Disable main dashboard scroll and handle it locally
+  useEffect(() => {
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+      const originalOverflow = mainElement.style.overflow;
+      mainElement.style.overflow = 'hidden';
+      return () => {
+        mainElement.style.overflow = originalOverflow;
+      };
+    }
+  }, []);
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -126,11 +200,17 @@ function NewProposalContent() {
         const res = await fetch("/api/plans");
         if (res.ok) {
           const data = await res.json();
-          if (!data.plans || Object.keys(data.plans).length === 0) {
-              setDbPlans(DEFAULT_PLANS);
-          } else {
-              setDbPlans(data.plans);
-          }
+          const plansFromDb = data.plans || {};
+          const finalPlans = { ...DEFAULT_PLANS } as any;
+          
+          // Only use DB plan if it has the new structure
+          Object.keys(plansFromDb).forEach(key => {
+            if (plansFromDb[key] && plansFromDb[key].ageTiers) {
+              finalPlans[key] = plansFromDb[key];
+            }
+          });
+
+          setDbPlans(finalPlans);
         }
       } catch (err) {
         console.error("Failed to fetch plans", err);
@@ -165,7 +245,10 @@ function NewProposalContent() {
     notes: "",
     accidentalDeathBenefit: "",
     spousalDeathBenefit: "",
+    isInsured: "No", // NEW: Yes or No
   });
+
+  const [clientSignature, setClientSignature] = useState<string | null>(null);
 
   useEffect(() => {
     if (clientId) {
@@ -198,25 +281,67 @@ function NewProposalContent() {
   }, [clientId]);
 
   const handleChange = (field: string, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      
+      // If DOB changes and a plan is already selected, update the base premium
+      if (field === "clientDOB") {
+        const tier = getTierForAge(selectedPlan || "BASIC", value as string);
+        if (tier) setSelectedTierLabel(tier.label);
+        
+        if (selectedPlan && selectedOption && tier && tier.options && tier.options[selectedOption.id]) {
+            newData.proposedPremium = tier.options[selectedOption.id];
+        }
+      }
+      
+      return newData;
+    });
+  };
+
+  const getTierForAge = (planKey: string, dob: string) => {
+    const plan = (dbPlans && dbPlans[planKey]) ? dbPlans[planKey] : (DEFAULT_PLANS as any)[planKey];
+    if (!plan || !plan.ageTiers) return null;
+
+    let age = calculateAge(dob);
+    
+    // Default to the first tier (18-64) if age is 0 (empty DOB) for preview
+    if (age === 0) return plan.ageTiers[0];
+    
+    if (age >= 85) age = 84;
+
+    return plan.ageTiers.find((t: any) => age >= t.minAge && age <= t.maxAge) || null;
+  };
+
+  const getActiveTier = (planKey: string) => {
+    const plan = (dbPlans && dbPlans[planKey]) ? dbPlans[planKey] : (DEFAULT_PLANS as any)[planKey];
+    if (!plan || !plan.ageTiers) return null;
+
+    if (selectedTierLabel) {
+        const manualTier = plan.ageTiers.find((t: any) => t.label === selectedTierLabel);
+        if (manualTier) return manualTier;
+    }
+
+    return getTierForAge(planKey, formData.clientDOB);
   };
 
   const handlePlanSelect = (planKey: string) => {
     setSelectedPlan(planKey);
-    const planData = dbPlans?.[planKey];
-    if (planData) {
-      handleChange("planType", planKey);
-      if (planData.options?.length > 0) {
-        handleOptionSelect(planData.options[0]);
-      }
+    handleChange("planType", planKey);
+    
+    const tier = getActiveTier(planKey);
+    if (tier && tier.options) {
+      // Default to SINGLE if available
+      handleOptionSelect("SINGLE", tier.options.SINGLE);
     }
   };
 
-  const handleOptionSelect = (opt: any) => {
-    setSelectedOption(opt);
-    handleChange("proposedPremium", opt.premium);
-    // Auto-set policy type based on max people
-    handleChange("policyType", opt.maxPeople > 1 ? "FAMILY" : "INDIVIDUAL");
+  const handleOptionSelect = (optionKey: string, premium: number) => {
+    setSelectedOption({ id: optionKey, premium });
+    handleChange("proposedPremium", premium);
+    
+    // Policy type determination
+    const isFamily = ["FAMILY", "EXTENDED_FAMILY", "MEMBER_SPOUSE"].includes(optionKey);
+    handleChange("policyType", isFamily ? "FAMILY" : "INDIVIDUAL");
   };
 
   const addDependent = () => {
@@ -272,12 +397,37 @@ function NewProposalContent() {
   };
 
   const calculateTotalPremium = () => {
+    const planKey = selectedPlan;
+    if (!planKey) return Number(formData.proposedPremium) || 0;
+
     let total = Number(formData.proposedPremium) || 0;
-    const planData = dbPlans?.[selectedPlan];
+    const optionKey = selectedOption?.id;
     
-    // Add dependent premiums natively if configured in the new structure
-    if (planData?.dependentPremium && dependents.length > 0) {
-      total += (dependents.length * Number(planData.dependentPremium));
+    if (dependents.length > 0) {
+      const plan = (dbPlans && dbPlans[planKey]) ? dbPlans[planKey] : (DEFAULT_PLANS as any)[planKey];
+      
+      // logic for children inclusion
+      const includedChildren = optionKey === "FAMILY" ? 5 : 0;
+      let childrenActuallyIncluded = 0;
+
+      dependents.forEach(dep => {
+        const depTier = getTierForAge(planKey, dep.dateOfBirth);
+        if (!depTier) return;
+
+        if (dep.relationship === "CHILD") {
+          if (childrenActuallyIncluded < includedChildren) {
+            childrenActuallyIncluded++;
+            // Included children are $0 extra
+          } else {
+            total += Number(depTier.dependents.CHILD || 0);
+          }
+        } else if (dep.relationship === "EXTENDED") {
+          total += Number(depTier.dependents.EXTENDED || depTier.dependents.CHILD || 0);
+        } else {
+          // Other relationships (SPOUSE, SIBLING, etc.) - default to CHILD premium if not specified
+          total += Number(depTier.dependents.CHILD || 0);
+        }
+      });
     }
 
     // Add optional benefits premiums
@@ -314,6 +464,7 @@ function NewProposalContent() {
           premium: depPremium
         })) : undefined,
         beneficiaries: beneficiaries.length > 0 ? beneficiaries : undefined,
+        clientSignature,
         status,
       };
 
@@ -338,24 +489,27 @@ function NewProposalContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/proposals">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">New Proposal</h1>
-          <p className="text-gray-500">Create a new policy proposal</p>
+    <div className="flex flex-col h-full -m-4 lg:-m-6">
+      <div className="p-4 lg:p-6 border-b bg-white flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/proposals">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">New Proposal</h1>
+            <p className="text-gray-500">Create a new policy proposal</p>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600">{error}</div>
-      )}
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+        {error && (
+          <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600">{error}</div>
+        )}
 
-      <form onSubmit={(e) => handleSubmit(e, "DRAFT")} className="space-y-6">
+        <form id="proposal-form" onSubmit={(e) => handleSubmit(e, "DRAFT")} className="space-y-6 pb-20">
         {/* Plan Selection */}
         <Card>
           <CardHeader>
@@ -366,31 +520,42 @@ function NewProposalContent() {
             <CardDescription>Choose a funeral plan for the client</CardDescription>
           </CardHeader>
           <CardContent>
-            {dbPlans ? (
+            {dbPlans || DEFAULT_PLANS ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {["WHITE", "GOLD", "BLUE", "PURPLE"].map((key) => {
-                  const planData = dbPlans[key];
+                {["BASIC", "BRONZE", "SILVER", "GOLD"].map((key) => {
+                  const planData = (dbPlans && dbPlans[key]) ? dbPlans[key] : (DEFAULT_PLANS as any)[key];
                   if (!planData) return null;
-                  const premium = planData.options?.[0]?.premium || 0;
-                  const cover = planData.cover || 0;
+                  
+                  const tier = getActiveTier(key);
+                  const isAvailable = !!tier;
                   const name = planData.name || key;
+                  const cashBenefit = planData.cashBenefit || 0;
 
                   return (
                     <div
                       key={key}
-                      onClick={() => handlePlanSelect(key)}
-                      className={`cursor-pointer flex flex-col rounded-lg border-2 p-4 transition-all ${selectedPlan === key
+                      onClick={() => isAvailable && handlePlanSelect(key)}
+                      className={`cursor-pointer flex flex-col rounded-lg border-2 p-4 transition-all ${
+                        !isAvailable ? "opacity-50 cursor-not-allowed bg-gray-50 border-gray-200" :
+                        selectedPlan === key
                           ? "border-purple-600 ring-2 ring-purple-200"
                           : "border-gray-200 hover:border-purple-300"
                         }`}
                     >
-                      <div>
-                        <Badge className="bg-purple-100 text-purple-800">{key}</Badge>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <Badge className={PLAN_COLORS[key] || "bg-purple-100 text-purple-800"}>{key}</Badge>
+                          {!isAvailable && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold">UNAVAILABLE</span>}
+                        </div>
                         <h3 className="mt-2 font-semibold text-gray-900">{name}</h3>
                         <p className="text-2xl font-bold text-purple-600">
-                          {formatCurrency(premium)}
+                          {isAvailable ? formatCurrency(tier.options.SINGLE) : "—"}
                           <span className="text-sm font-normal text-gray-500">/mo+</span>
                         </p>
+                        <div className="mt-3 space-y-1">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cash Benefit</p>
+                            <p className="text-sm font-semibold text-gray-700">{formatCurrency(cashBenefit)}</p>
+                        </div>
                       </div>
                     </div>
                   );
@@ -400,24 +565,72 @@ function NewProposalContent() {
                 <div className="py-8 text-center text-sm text-gray-500">Loading plans configuration...</div>
             )}
 
-            {selectedPlan && dbPlans?.[selectedPlan]?.options?.length > 0 && (
-              <div className="mt-6 border-t pt-4">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Select Plan Variant</h4>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      {dbPlans[selectedPlan].options.map((opt: any) => (
-                          <div 
-                              key={opt.id}
-                              onClick={() => handleOptionSelect(opt)}
-                              className={`cursor-pointer rounded-lg border p-3 flex justify-between items-center ${selectedOption?.id === opt.id ? 'bg-purple-50 border-purple-500 ring-1 ring-purple-500' : 'bg-white hover:bg-gray-50'}`}
-                          >
-                              <div>
-                                  <p className="font-medium text-sm text-gray-900">{opt.name}</p>
-                                  <p className="text-xs text-gray-500">Max {opt.maxPeople} people</p>
-                              </div>
-                              <span className="font-bold text-purple-700">{formatCurrency(opt.premium)}</span>
-                          </div>
-                      ))}
+            {selectedPlan && (
+              <div className="mt-8 border-t pt-6">
+                  <div className="flex flex-col gap-4 mb-6">
+                      <div className="flex justify-between items-center sm:flex-row flex-col gap-3">
+                        <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">Choose Age Group</h4>
+                        <div className="flex flex-wrap gap-2">
+                             {(dbPlans && dbPlans[selectedPlan] ? dbPlans[selectedPlan] : (DEFAULT_PLANS as any)[selectedPlan]).ageTiers.map((t: any, idx: number) => {
+                                 const autoTier = getTierForAge(selectedPlan, formData.clientDOB);
+                                 const isAuto = autoTier?.label === t.label;
+                                 const isSelected = selectedTierLabel ? selectedTierLabel === t.label : isAuto;
+                                 
+                                 return (
+                                     <Badge 
+                                        key={idx} 
+                                        onClick={() => {
+                                            setSelectedTierLabel(t.label);
+                                            // Auto-update premium if option is selected
+                                            if (selectedOption && t.options[selectedOption.id]) {
+                                                handleChange("proposedPremium", t.options[selectedOption.id]);
+                                            }
+                                        }}
+                                        variant={isSelected ? "default" : "outline"} 
+                                        className={`cursor-pointer transition-all px-3 py-1 ${isSelected ? "bg-purple-600 scale-105 shadow-md" : "text-gray-500 border-gray-200 hover:border-purple-300"}`}
+                                     >
+                                         {t.label} {isAuto && " (Auto)"}
+                                     </Badge>
+                                 );
+                             })}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-gray-500 italic">Age group is automatically selected based on DOB, but you can manually override it if needed.</p>
                   </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      {getActiveTier(selectedPlan) && Object.entries(getActiveTier(selectedPlan).options).map(([optKey, premium]) => {
+                          if (premium === 0) return null; // Handle unavailable options (-- in user req)
+                          return (
+                            <div 
+                                key={optKey}
+                                onClick={() => handleOptionSelect(optKey, premium as number)}
+                                className={`cursor-pointer rounded-lg border p-4 flex flex-col gap-1 transition-all ${selectedOption?.id === optKey ? 'bg-purple-50 border-purple-500 ring-1 ring-purple-500' : 'bg-white hover:bg-gray-50'}`}
+                            >
+                                <p className="font-bold text-xs text-gray-500 uppercase tracking-widest">{optKey.replace('_', ' ')}</p>
+                                <span className="font-bold text-lg text-purple-700">{formatCurrency(premium as number)}</span>
+                                <p className="text-[10px] text-gray-400">
+                                    {optKey === 'FAMILY' ? 'Incl. up to 5 children' : 
+                                     optKey === 'SINGLE' ? 'Principal member only' :
+                                     optKey === 'MEMBER_SPOUSE' ? 'Principal + Spouse' :
+                                     'Extended family coverage'}
+                                </p>
+                            </div>
+                          );
+                      })}
+                  </div>
+
+                  {/* Benefit preview stored in background */}
+                   <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Plan Benefits Preview</p>
+                      <ul className="text-xs text-gray-600 grid grid-cols-2 gap-x-6 gap-y-1">
+                          {(dbPlans || DEFAULT_PLANS)[selectedPlan]?.benefits.map((b: string, i: number) => (
+                              <li key={i} className="flex items-center gap-1.5">
+                                  <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                                  <span className="truncate">{b}</span>
+                              </li>
+                          ))}
+                      </ul>
+                   </div>
               </div>
             )}
           </CardContent>
@@ -455,6 +668,41 @@ function NewProposalContent() {
               >
                 <p className="font-bold text-gray-900">Cash Plan</p>
                 <p className="text-xs text-gray-500">Cash payout benefit</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Insured Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Badge className="h-5 w-5 flex items-center justify-center p-0 rounded-full">?</Badge>
+              Is the client currently insured?
+            </CardTitle>
+            <CardDescription>Specify if the client has an existing insurance policy with another provider</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div
+                onClick={() => handleChange("isInsured", "Yes")}
+                className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all ${
+                  formData.isInsured === "Yes"
+                    ? "border-blue-600 bg-blue-50 ring-2 ring-blue-200"
+                    : "border-gray-200 hover:border-blue-300"
+                }`}
+              >
+                <p className="font-bold text-gray-900">Yes</p>
+              </div>
+              <div
+                onClick={() => handleChange("isInsured", "No")}
+                className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all ${
+                  formData.isInsured === "No"
+                    ? "border-purple-600 bg-purple-50 ring-2 ring-purple-200"
+                    : "border-gray-200 hover:border-purple-300"
+                }`}
+              >
+                <p className="font-bold text-gray-900">No</p>
               </div>
             </div>
           </CardContent>
@@ -593,9 +841,34 @@ function NewProposalContent() {
                       className="rounded-lg border border-gray-200 p-4 space-y-4"
                     >
                       <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-900">
-                          Dependent {index + 1}
-                        </h4>
+                        <div className="flex items-center gap-3">
+                            <h4 className="font-medium text-gray-900">
+                              Dependent {index + 1}
+                            </h4>
+                            {dep.dateOfBirth && (
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-50">
+                                    Age: {calculateAge(dep.dateOfBirth)}
+                                </Badge>
+                            )}
+                            {selectedPlan && dep.dateOfBirth && (
+                                <Badge variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-50">
+                                    Premium: {formatCurrency(
+                                        (() => {
+                                            const tier = getTierForAge(selectedPlan, dep.dateOfBirth);
+                                            if (!tier) return 0;
+                                            
+                                            // Handle inclusion logic roughly for display
+                                            if (dep.relationship === "CHILD") {
+                                                const childrenBefore = dependents.slice(0, index).filter(d => d.relationship === "CHILD").length;
+                                                const included = selectedOption?.id === "FAMILY" ? 5 : 0;
+                                                return childrenBefore < included ? 0 : (tier.dependents.CHILD || 0);
+                                            }
+                                            return dep.relationship === "EXTENDED" ? (tier.dependents.EXTENDED || tier.dependents.CHILD || 0) : (tier.dependents.CHILD || 0);
+                                        })()
+                                    )}
+                                </Badge>
+                            )}
+                        </div>
                         <Button
                           type="button"
                           variant="ghost"
@@ -905,44 +1178,79 @@ function NewProposalContent() {
           </CardContent>
         </Card>
 
-        {/* Summary & Actions */}
-        <Card className="bg-purple-50 border-purple-200">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Total Monthly Premium</p>
-                <p className="text-3xl font-bold text-purple-700">
-                  {formatCurrency(calculateTotalPremium())}
-                </p>
-                {dependents.length > 0 && (
-                  <p className="text-sm text-gray-500">
-                    Including {dependents.length} dependent(s)
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Link href="/proposals">
-                  <Button variant="outline" type="button">
-                    Cancel
-                  </Button>
-                </Link>
-                <Button type="submit" variant="secondary" loading={loading}>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save as Draft
-                </Button>
-                <Button
-                  type="button"
-                  onClick={(e) => handleSubmit(e, "SUBMITTED")}
-                  loading={loading}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  Submit Proposal
-                </Button>
-              </div>
+        {/* Declaration & Signature */}
+        <Card className="border-purple-200">
+          <CardHeader className="bg-purple-50/50">
+            <CardTitle className="text-purple-900 uppercase">Declaration</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <p className="text-sm text-gray-700 leading-relaxed text-justify italic border-l-4 border-purple-300 pl-4 bg-gray-50/50 py-3">
+              &quot;I the undersigned do hereby declare that all the information provided by me in this application form is accurate. I also understand the provision of services and 
+              payments of proceeds due in respect of this policy shall represent the full and final discharge of Royalty Funeral Services’ liability in the event of death. I agree 
+              that my premium shall be adjusted at the company’s discretion in line with inflation and the cost of providing a service from time to time.&quot;
+            </p>
+            
+            <div className="max-w-md mx-auto">
+              <SignatureSelector 
+                label="Client Signature" 
+                onSignatureChange={setClientSignature} 
+              />
             </div>
           </CardContent>
         </Card>
-      </form>
+
+        </form>
+      </div>
+
+      {/* Sticky Summary Bar */}
+      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-purple-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] p-4 lg:px-12 z-50">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+               <CreditCard className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Monthly Premium</p>
+              <p className="text-2xl font-black text-purple-700 leading-none">
+                {formatCurrency(calculateTotalPremium())}
+              </p>
+              {dependents.length > 0 && (
+                <p className="text-[10px] text-gray-500 font-medium mt-1">
+                  Incl. {dependents.length} dependent(s)
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Link href="/proposals">
+              <Button variant="ghost" type="button" className="text-gray-500 hover:text-gray-700">
+                Cancel
+              </Button>
+            </Link>
+            <Button 
+                form="proposal-form"
+                type="submit" 
+                variant="outline" 
+                loading={loading}
+                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save Draft
+            </Button>
+            <Button
+              type="button"
+              form="proposal-form"
+              onClick={(e) => handleSubmit(e, "SUBMITTED")}
+              loading={loading}
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-200"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Submit Proposal
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

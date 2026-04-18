@@ -1,5 +1,0 @@
-# I need to be able to add the beneficiary contact number and be able to see it on beneficiary details
-# I need to be able see the admin signature placed automatically on the policy generation if it's there on the db
-# Why is this address still not changed to my current Royalty address  write to Royalty Funeral Services Suite 309 Sterling House, between L. Takawira and 8th Avenue along J. Moyo Street Bulawayo. pleease fix that
-# The agents should not be able to review and approve proposals
-# On the payment creation, it should show a hint of how much monthly premium is supposed to be paid

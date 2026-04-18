@@ -140,6 +140,8 @@ export async function POST(request: NextRequest) {
       debitOrderDay: body.debitOrderDay ? parseInt(body.debitOrderDay) : null,
       status: body.status || "DRAFT",
       notes: body.notes,
+      isInsured: body.isInsured || "No",
+      clientSignature: body.clientSignature || null,
       createdAt: new Date().toISOString(),
       createdBy: user.userId
     };

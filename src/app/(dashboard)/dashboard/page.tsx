@@ -29,6 +29,7 @@ interface DashboardStats {
   totalClaims: number;
   pendingClaims: number;
   pendingAlterations: number;
+  pendingPayments: number;
   monthlyRevenue: number;
   claimsPaid: number;
   policiesByPlan: { plan: string; count: number }[];
@@ -45,6 +46,7 @@ const emptyStats: DashboardStats = {
   totalClaims: 0,
   pendingClaims: 0,
   pendingAlterations: 0,
+  pendingPayments: 0,
   monthlyRevenue: 0,
   claimsPaid: 0,
   policiesByPlan: [],
@@ -119,6 +121,14 @@ const pendingCards = [
     color: "text-blue-600",
     href: "/alterations?status=pending",
   },
+  {
+    title: "Pending Payments",
+    key: "pendingPayments" as const,
+    icon: CreditCard,
+    color: "text-purple-600",
+    href: "/payments?status=pending",
+    hideForAgents: true,
+  },
 ];
 
 const planColors: Record<string, string> = {
@@ -182,7 +192,7 @@ export default function DashboardPage() {
             </p>
             <div className="mt-2 text-xs text-gray-400 space-y-0.5">
               <p>Phones: +263 71 787 4750 / +263 71 787 4747</p>
-              <p>Address: Stand 15383 Khami Road Kelvin North, Bulawayo</p>
+              <p>Address: Stand 15383, Khami Road Kelvin North 11, Bulawayo</p>
             </div>
           </div>
           <Image
@@ -242,22 +252,24 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
-              {pendingCards.map((card) => (
-                <Link key={card.title} href={card.href}>
-                  <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <card.icon className={`h-5 w-5 ${card.color}`} />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{card.title}</p>
-                        <p className="text-lg font-bold text-gray-900">
-                          {stats[card.key].toLocaleString()}
-                        </p>
+              {pendingCards
+                .filter(card => !(isAgent && (card as any).hideForAgents))
+                .map((card) => (
+                  <Link key={card.title} href={card.href}>
+                    <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <card.icon className={`h-5 w-5 ${card.color}`} />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{card.title}</p>
+                          <p className="text-lg font-bold text-gray-900">
+                            {stats[card.key].toLocaleString()}
+                          </p>
+                        </div>
                       </div>
+                      <ArrowRight className="h-4 w-4 text-gray-400" />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                ))}
             </div>
           </CardContent>
         </Card>

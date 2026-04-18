@@ -152,7 +152,21 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
                     </Button>
                     <ShareDocumentButton 
                         title={`Proposal ${proposal.proposalNumber}`} 
-                        text={`Hello ${proposal.clientFirstName},\n\nHere is a link to your Royalty Funeral Services Proposal ${proposal.proposalNumber}.`}
+                        text={`Hello ${proposal.clientFirstName},\n\nHere is your Royalty Funeral Services Proposal ${proposal.proposalNumber}.`}
+                        formattedText={`
+*ROYALTY FUNERAL SERVICES*
+*PROPOSAL SUMMARY*
+
+*Proposal No:* ${proposal.proposalNumber}
+*Client:* ${proposal.clientTitle} ${proposal.clientFirstName} ${proposal.clientLastName}
+*Plan:* ${proposal.planType} (${proposal.planServiceType || "SERVICE"})
+*Premium:* ${formatCurrency(proposal.proposedPremium)}
+
+*Status:* ${proposal.status.replace("_", " ")}
+*Date:* ${formatDate(proposal.createdAt)}
+
+_A Dignified Send-Off_
+                        `.trim()}
                     />
                     {proposal.status === "SUBMITTED" && (
                         <Button onClick={() => handleStatusChange("UNDER_REVIEW")}>

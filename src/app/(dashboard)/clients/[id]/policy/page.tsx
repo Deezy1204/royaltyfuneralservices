@@ -7,10 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Printer, FileText, CheckCircle2 } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { ArrowLeft, Printer, FileText, CheckCircle2, Share2, Image as ImageIcon } from "lucide-react";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import { SignatureSelector } from "@/components/SignatureSelector";
 import { useAuth } from "@/hooks/useAuth";
+import html2canvas from "html2canvas";
+import { ShareDocumentButton } from "@/components/ui/ShareDocumentButton";
+import { toast } from "sonner";
+import { useRef } from "react";
 
 export default function PolicyGenerationPage() {
     const { id } = useParams();
@@ -21,6 +25,8 @@ export default function PolicyGenerationPage() {
     const [policy, setPolicy] = useState<any>(null);
     const [adminSignature, setAdminSignature] = useState<string | null>(null);
     const [clientSignature, setClientSignature] = useState<string | null>(null);
+    
+    const policyRef = useRef<HTMLDivElement>(null);
 
     // Form fields for missing details / overrides
     const [formData, setFormData] = useState({
@@ -31,20 +37,6 @@ export default function PolicyGenerationPage() {
         address: "",
         idNumber: "",
     });
-
-    const getCoverDate = (dateStr: string) => {
-        if (!dateStr) return "";
-        const d = new Date(dateStr);
-        d.setMonth(d.getMonth() + 3);
-        return formatDate(d.toISOString());
-    };
-    
-    const getPaidUpDate = (dateStr: string) => {
-        if (!dateStr) return "";
-        const d = new Date(dateStr);
-        d.setFullYear(d.getFullYear() + 20);
-        return formatDate(d.toISOString());
-    };
 
     useEffect(() => {
         if (currentUser?.signature) {
@@ -71,7 +63,7 @@ export default function PolicyGenerationPage() {
                             inceptionDate: firstPolicy.inceptionDate ? firstPolicy.inceptionDate.substring(0, 10) : "",
                             planType: firstPolicy.planType || "",
                             premiumAmount: firstPolicy.premiumAmount ? firstPolicy.premiumAmount.toString() : "",
-                            address: (data.client.street || "") + (data.client.city ? ", " + data.client.city : ""),
+                            address: (data.client.streetAddress || "") + (data.client.city ? ", " + data.client.city : ""),
                             idNumber: data.client.idNumber || "",
                         });
                     }
@@ -89,6 +81,68 @@ export default function PolicyGenerationPage() {
         window.print();
     };
 
+    const handleShareImage = async () => {
+        if (!policyRef.current) return;
+        
+        const toastId = toast.loading("Generating policy document image...");
+        try {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const canvas = await html2canvas(policyRef.current, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: "#ffffff"
+            });
+            
+            canvas.toBlob(async (blob) => {
+                if (!blob) throw new Error("Canvas to Blob failed");
+                const file = new File([blob], `policy-${formData.policyNumber}.png`, { type: 'image/png' });
+                
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: `Policy Document - ${formData.policyNumber}`,
+                        text: `Funeral Policy for ${client.firstName} ${client.lastName}`
+                    });
+                    toast.success("Shared successfully", { id: toastId });
+                } else {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `policy-${formData.policyNumber}.png`;
+                    link.click();
+                    toast.success("Image saved to your device", { id: toastId });
+                }
+            }, 'image/png');
+        } catch (err) {
+            console.error("Error generating image:", err);
+            toast.error("Failed to generate image", { id: toastId });
+        }
+    };
+
+    // Enhanced formattedText with full details
+    const dependentsStr = policy?.dependents ? Object.values(policy.dependents).map((d: any) => `• ${d.firstName} ${d.lastName} (${d.relationship})`).join('\n') : "None";
+    const beneficiariesStr = policy?.beneficiaries ? Object.values(policy.beneficiaries).map((b: any) => `• ${b.firstName} ${b.lastName} (${b.relationship})`).join('\n') : "None";
+
+    const formattedText = client ? `
+*ROYALTY FUNERAL SERVICES*
+*POLICY DOCUMENT*
+
+*Policy No:* ${formData.policyNumber}
+*Client:* ${client.firstName} ${client.lastName}
+*Plan:* ${formData.planType}
+*Premium:* ${formatCurrency(Number(formData.premiumAmount) || 0)}
+*Commencement:* ${formData.inceptionDate}
+
+*DEPENDENTS:*
+${dependentsStr}
+
+*BENEFICIARIES:*
+${beneficiariesStr}
+
+_A Dignified Send-Off_
+`.trim() : "";
+
     if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
     if (!client) return <div className="p-8 text-center text-red-500">Client not found</div>;
 
@@ -97,15 +151,25 @@ export default function PolicyGenerationPage() {
             <div className="max-w-4xl mx-auto space-y-6">
                 
                 {/* Print Hidden Actions */}
-                <div className="flex items-center justify-between print:hidden mb-6">
+                <div className="flex flex-col sm:flex-row items-center justify-between print:hidden mb-6 gap-4">
                     <Link href={`/clients/${id}`}>
                         <Button variant="ghost" className="gap-2">
                             <ArrowLeft className="h-4 w-4" /> Back to Client
                         </Button>
                     </Link>
-                    <Button onClick={handlePrint} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                        <Printer className="h-4 w-4" /> Print Documents
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button onClick={handleShareImage} variant="outline" className="gap-2 border-green-200 text-green-700 hover:bg-green-50">
+                            <ImageIcon className="h-4 w-4" /> Share Image
+                        </Button>
+                        <ShareDocumentButton 
+                            title={`Policy Document - ${formData.policyNumber}`}
+                            text={`Funeral Policy for ${client.firstName} ${client.lastName}`}
+                            formattedText={formattedText}
+                        />
+                        <Button onClick={handlePrint} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                            <Printer className="h-4 w-4" /> Print Documents
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Form to prefill details - Hidden on Print */}
@@ -179,6 +243,7 @@ export default function PolicyGenerationPage() {
                 </Card>
 
                 {/* --- PRINTABLE DOCUMENTS --- */}
+                <div ref={policyRef} className="space-y-6 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden print:shadow-none print:border-none">
                 
                 {/* 1. Acceptance Letter */}
                 <div className="bg-white p-8 md:p-16 print:p-0 page-break-after relative min-h-[1050px] flex flex-col">
@@ -187,9 +252,7 @@ export default function PolicyGenerationPage() {
                             <img src="/images/logo.png" alt="Royalty Logo" className="h-14 w-auto object-contain" />
                         </div>
                         <div className="text-right text-xs text-gray-500">
-                            <p>Stand 15383 Khami Road</p>
-                            <p>Kelvin North, Bulawayo</p>
-                            <p>Zimbabwe</p>
+                            <p>Stand 15383, Khami Road Kelvin North 11, Bulawayo</p>
                         </div>
                     </div>
 
@@ -201,7 +264,7 @@ export default function PolicyGenerationPage() {
                     <p className="mb-6"><strong>Ref: LETTER OF ACCEPTANCE OF FUNERAL POLICY APPLICATION</strong></p>
 
                     <p className="mb-4 text-justify">
-                        We would like to take this opportunity to inform you that your application for the funeral service cover was successful. Your policy number is <strong>{formData.policyNumber}</strong>. Please examine the document carefully and let us know of any error or omission and arrangements will be done to get the same rectified. You have the right to review your Policy within 30 days of the date of this letter. Should you wish to exercise this option please write to Royalty Funeral Services Suite 309 Sterling House, between L. Takawira and 8th Avenue along J. Moyo Street Bulawayo.
+                        We would like to take this opportunity to inform you that your application for the funeral service cover was successful. Your policy number is <strong>{formData.policyNumber}</strong>. Please examine the document carefully and let us know of any error or omission and arrangements will be done to get the same rectified. You have the right to review your Policy within 30 days of the date of this letter. Should you wish to exercise this option please write to Royalty Funeral Services Stand 15383, Khami Road Kelvin North 11, Bulawayo.
                     </p>
 
                     <p className="mb-8 text-justify">
@@ -230,9 +293,7 @@ export default function PolicyGenerationPage() {
                             <img src="/images/logo.png" alt="Royalty Logo" className="h-14 w-auto object-contain" />
                         </div>
                         <div className="text-right text-xs text-gray-500">
-                            <p>Stand 15383 Khami Road</p>
-                            <p>Kelvin North, Bulawayo</p>
-                            <p>Zimbabwe</p>
+                            <p>Stand 15383, Khami Road Kelvin North 11, Bulawayo</p>
                         </div>
                     </div>
 
@@ -245,15 +306,12 @@ export default function PolicyGenerationPage() {
                             <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Date of Birth:</td><td className="p-2">{formatDate(client.dateOfBirth)}</td></tr>
                             <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">ID Number:</td><td className="p-2">{formData.idNumber}</td></tr>
                             <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Contact Number:</td><td className="p-2">{client.phone}</td></tr>
-                            <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Address:</td><td className="p-2 whitespace-pre-wrap">{formData.address}</td></tr>
+                            <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Address:</td><td className="p-2 whitespace-pre-wrap leading-relaxed">{formData.address}</td></tr>
                             <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Premium:</td><td className="p-2">${formData.premiumAmount} USD</td></tr>
                             <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Plan Level:</td><td className="p-2">{formData.planType}</td></tr>
                             <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Premium Mode:</td><td className="p-2">Monthly</td></tr>
                             <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Review Date:</td><td className="p-2">Annually, automatically</td></tr>
                             <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Commencement Date:</td><td className="p-2">{formData.inceptionDate ? formatDate(formData.inceptionDate) : ""}</td></tr>
-                            <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Cover Date:</td><td className="p-2">{getCoverDate(formData.inceptionDate)}</td></tr>
-                            <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Term of Contract:</td><td className="p-2">20 years</td></tr>
-                            <tr className="border-b border-gray-900"><td className="p-2 border-r border-gray-900 font-bold">Paid up date:</td><td className="p-2">{getPaidUpDate(formData.inceptionDate)}</td></tr>
                             <tr><td className="p-2 border-r border-gray-900 font-bold">Financial Advisor:</td><td className="p-2">B. Sibanda</td></tr>
                         </tbody>
                     </table>
@@ -421,18 +479,20 @@ export default function PolicyGenerationPage() {
                         <p className="text-blue-900 font-bold text-xs tracking-widest">ROYALTY FUNERAL SERVICES – A DIGNIFIED SEND-OFF</p>
                     </div>
                 </div>
-
+                </div>
             </div>
 
             <style jsx global>{`
                 @media print {
                     @page {
-                        margin: 0;
-                        size: auto;
+                        margin: 1cm;
+                        size: A4;
                     }
                     body {
-                        margin: 1.6cm;
+                        margin: 0;
                         background-color: white !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                     .page-break-after {
                         page-break-after: always;
@@ -441,8 +501,11 @@ export default function PolicyGenerationPage() {
                         page-break-before: always;
                     }
                     /* Hide browser header and footer */
-                    header, footer, .no-print {
+                    header, footer, .no-print, .print:hidden {
                         display: none !important;
+                    }
+                    .bg-white {
+                        background-color: white !important;
                     }
                 }
             `}</style>

@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save, Search, AlertCircle, CheckCircle, User, DollarSign, Coins } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import ReactSelect from "react-select";
 import { SignatureSelector } from "@/components/SignatureSelector";
+import { Camera, Upload, X } from "lucide-react";
+import { toast } from "sonner";
 
 // Convert number to words
 function numberToWords(amount: number, currency: string = "ZAR"): string {
@@ -87,10 +89,12 @@ function NewPaymentContent() {
         monthsCovered: [] as string[],
         receivedBy: "",
         notes: "",
+        proofOfPayment: "" as string,
     });
 
     const [adminSignature, setAdminSignature] = useState<string | null>(null);
     const [clientSignature, setClientSignature] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     const amountInWords = numberToWords(parseFloat(form.amount) || 0, form.currency);
 
@@ -163,6 +167,45 @@ function NewPaymentContent() {
         setForm(p => ({ ...p, policyId: "" }));
     };
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validation: Limit size to 5MB
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("File size is too large. please choose an image under 5MB.");
+            return;
+        }
+
+        setUploading(true);
+        setError("");
+        
+        const toastId = toast.loading("Processing image...");
+        
+        try {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setForm(p => ({ ...p, proofOfPayment: base64String }));
+                toast.success("Image processed successfully", { id: toastId });
+                setUploading(false);
+            };
+            reader.onerror = () => {
+                toast.error("Failed to read image file", { id: toastId });
+                setUploading(false);
+            };
+            reader.readAsDataURL(file);
+        } catch (err: any) {
+            console.error("Processing failed:", err);
+            toast.error("Failed to process image", { id: toastId });
+            setUploading(false);
+        }
+    };
+
+    const handleRemoveFile = () => {
+        setForm(p => ({ ...p, proofOfPayment: "" }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedClient) { setError("Please select a client"); return; }
@@ -183,7 +226,7 @@ function NewPaymentContent() {
                 amountInWords,
                 adminSignature,
                 clientSignature,
-                status: "CONFIRMED",
+                proofOfPayment: form.proofOfPayment,
             };
             const res = await fetch("/api/payments", {
                 method: "POST",
@@ -239,8 +282,8 @@ function NewPaymentContent() {
                         <div className="text-center space-y-1 border-b pb-4 mb-4">
                             <h2 className="text-xl font-bold text-purple-800">ROYALTY FUNERAL SERVICES</h2>
                             <p className="text-sm text-gray-600">Premium Funeral Cover Provider</p>
-                            <p className="text-xs text-gray-500">Phones: +263 71 787 4750 / +263 71 787 4747 | Email: info@royaltyfuneral.co.za</p>
-                            <p className="text-xs text-gray-500">Stand 15383 Khami Road Kelvin North, Bulawayo</p>
+                            <p className="text-xs text-gray-500">Phones: +263 71 787 4750 / +263 71 787 4747 | Email: sales@royaltyfuneral.com</p>
+                            <p className="text-xs text-gray-500">Stand 15383, Khami Road Kelvin North 11, Bulawayo</p>
                         </div>
                         <h3 className="text-center font-semibold text-gray-800 uppercase tracking-wide">PAYMENT RECEIPT</h3>
                     </CardContent>
@@ -445,6 +488,73 @@ function NewPaymentContent() {
                             onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                             placeholder="Any additional notes..."
                         />
+
+                        {/* Proof of Payment Upload */}
+                        <div className="space-y-2 pt-2">
+                            <label className="text-sm font-medium">Proof of Payment (Optional)</label>
+                            {!form.proofOfPayment ? (
+                                <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-purple-300 transition-colors bg-gray-50/50">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                                            {uploading ? <div className="h-5 w-5 border-2 border-purple-600 border-t-transparent animate-spin rounded-full" /> : <Upload className="h-5 w-5" />}
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-gray-700">{uploading ? "Uploading..." : "Click to upload proof of payment"}</p>
+                                            <p className="text-xs text-gray-500">PNG, JPG or PDF up to 5MB</p>
+                                        </div>
+                                        <input 
+                                            type="file" 
+                                            className="hidden" 
+                                            id="proof-upload" 
+                                            accept="image/*,.pdf" 
+                                            onChange={handleFileChange}
+                                            disabled={uploading}
+                                        />
+                                        <Button 
+                                            type="button" 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => document.getElementById('proof-upload')?.click()}
+                                            disabled={uploading}
+                                        >
+                                            <Camera className="h-4 w-4 mr-2" /> Select File
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="relative border rounded-lg overflow-hidden group">
+                                    <div className="absolute top-2 right-2 z-10">
+                                        <Button 
+                                            type="button" 
+                                            variant="destructive" 
+                                            size="icon" 
+                                            className="h-8 w-8"
+                                            onClick={handleRemoveFile}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <div className="p-4 bg-green-50 flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded bg-green-100 flex items-center justify-center text-green-600">
+                                            <CheckCircle className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-green-800">Proof Uploaded Successfuly</p>
+                                            <p className="text-xs text-green-600">File attached to this payment record</p>
+                                        </div>
+                                    </div>
+                                    {form.proofOfPayment.match(/\.(jpg|jpeg|png|webp|gif)/i) && (
+                                        <div className="aspect-video w-full bg-gray-100 relative">
+                                            <img 
+                                                src={form.proofOfPayment} 
+                                                alt="Proof of Payment" 
+                                                className="h-full w-full object-contain" 
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
 

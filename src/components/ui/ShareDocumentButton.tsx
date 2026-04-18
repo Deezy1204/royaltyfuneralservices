@@ -17,10 +17,11 @@ interface ShareDocumentButtonProps {
   title: string;
   text: string;
   url?: string;
+  formattedText?: string;
   className?: string;
 }
 
-export function ShareDocumentButton({ title, text, url, className }: ShareDocumentButtonProps) {
+export function ShareDocumentButton({ title, text, url, formattedText, className }: ShareDocumentButtonProps) {
   const [shareUrl, setShareUrl] = useState("");
   const [canNativeShare, setCanNativeShare] = useState(false);
 
@@ -31,14 +32,25 @@ export function ShareDocumentButton({ title, text, url, className }: ShareDocume
     }
   }, [url]);
 
+  const getShareBody = () => {
+    if (formattedText) return formattedText;
+    return `${text}${shareUrl ? `\n\nLink: ${shareUrl}` : ""}`;
+  };
+
   const shareViaWhatsApp = () => {
-    const message = `${text}\n\nLink: ${shareUrl}`;
+    const message = getShareBody();
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+  };
+
+  const shareViaSMS = () => {
+    const message = getShareBody();
+    // Use sms: link format, using ; for iOS and ? for others is handled by some libs but simplified here
+    window.open(`sms:?&body=${encodeURIComponent(message)}`, "_self");
   };
 
   const shareViaEmail = () => {
     const subject = encodeURIComponent(title);
-    const body = encodeURIComponent(`${text}\n\nLink: ${shareUrl}`);
+    const body = encodeURIComponent(getShareBody());
     window.open(`mailto:?subject=${subject}&body=${body}`, "_blank");
   };
   
@@ -55,7 +67,7 @@ export function ShareDocumentButton({ title, text, url, className }: ShareDocume
     try {
       await navigator.share({
         title,
-        text,
+        text: formattedText || text,
         url: shareUrl,
       });
       toast.success("Shared successfully");
@@ -77,22 +89,16 @@ export function ShareDocumentButton({ title, text, url, className }: ShareDocume
         <DropdownMenuLabel>Share Document</DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        {canNativeShare && (
-          <DropdownMenuItem onClick={nativeShare}>
-            <Share2 className="mr-2 h-4 w-4" /> Native Share
-          </DropdownMenuItem>
-        )}
-        
         <DropdownMenuItem onClick={shareViaWhatsApp}>
           <MessageSquare className="mr-2 h-4 w-4 text-green-600" /> WhatsApp
+        </DropdownMenuItem>
+
+        <DropdownMenuItem onClick={shareViaSMS}>
+          <MessageSquare className="mr-2 h-4 w-4 text-blue-500" /> SMS Message
         </DropdownMenuItem>
         
         <DropdownMenuItem onClick={shareViaEmail}>
           <Mail className="mr-2 h-4 w-4 text-blue-600" /> Email
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={copyLink}>
-          <LinkIcon className="mr-2 h-4 w-4 text-gray-600" /> Copy Link
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

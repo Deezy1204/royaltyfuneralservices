@@ -118,22 +118,15 @@ export async function GET(request: NextRequest) {
 
     payments.forEach(p => {
       const pDate = new Date(p.paymentDate);
-      const isToday = p.paymentDate.startsWith(todayStr);
+      const isToday = p.paymentDate && p.paymentDate.startsWith(todayStr);
       const isThisMonth = pDate.getTime() >= monthStart;
 
-      if (isToday) todayTotal += p.amount;
-      if (isThisMonth) monthTotal += p.amount;
-      if (p.status === "PENDING") pendingCount++;
-    });
-
-    payments.forEach(p => {
-      const pDate = new Date(p.paymentDate);
-      const isToday = p.paymentDate.startsWith(todayStr);
-      const isThisMonth = pDate.getTime() >= monthStart;
-
-      if (isToday) todayTotal += p.amount;
-      if (isThisMonth) monthTotal += p.amount;
-      if (p.status === "PENDING") pendingCount++;
+      if (p.status === "CONFIRMED") {
+        if (isToday) todayTotal += (Number(p.amount) || 0);
+        if (isThisMonth) monthTotal += (Number(p.amount) || 0);
+      } else if (p.status === "PENDING") {
+        pendingCount++;
+      }
     });
 
     return NextResponse.json({
@@ -167,6 +160,9 @@ export async function POST(request: NextRequest) {
     const paymentNumber = generateNumber("PAY");
     const receiptNumber = body.receiptNumber || generateNumber("REC");
 
+    const isAgent = user.role === "AGENT";
+    const status = isAgent ? "PENDING" : "CONFIRMED";
+
     const payment = {
       paymentNumber,
       clientId: body.clientId,
@@ -182,12 +178,14 @@ export async function POST(request: NextRequest) {
       monthsIncluded: body.monthsIncluded || 1,
       monthsCovered: body.monthsCovered || "",
       amountInWords: body.amountInWords || null,
-      status: "CONFIRMED",
-      confirmedAt: new Date().toISOString(),
+      status: status,
+      confirmedAt: status === "CONFIRMED" ? new Date().toISOString() : null,
+      confirmedById: status === "CONFIRMED" ? user.userId : null,
       receivedById: user.userId,
       currency: body.currency || "USD",
       adminSignature: body.adminSignature || null,
       clientSignature: body.clientSignature || null,
+      proofOfPayment: body.proofOfPayment || null,
       notes: body.notes || "",
       createdAt: new Date().toISOString()
     };
@@ -197,14 +195,16 @@ export async function POST(request: NextRequest) {
     await set(newPayRef, sanitizeForFirebase(payment));
     const paymentId = newPayRef.key;
 
-    // Update policy: lastPaymentDate and arrears deduction
-    const policyRef = child(ref(db), `policies/${body.policyId}`);
-    const policySnap = await get(policyRef);
+    // Update policy: lastPaymentDate and arrears deduction - ONLY IF CONFIRMED
+    if (status === "CONFIRMED") {
+      const policyRef = child(ref(db), `policies/${body.policyId}`);
+      const policySnap = await get(policyRef);
 
-    if (policySnap.exists()) {
-      await update(policyRef, {
-        lastPaymentDate: new Date(body.paymentDate).toISOString(),
-      });
+      if (policySnap.exists()) {
+        await update(policyRef, {
+          lastPaymentDate: new Date(body.paymentDate).toISOString(),
+        });
+      }
     }
 
     await createAuditLog(

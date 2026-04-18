@@ -90,8 +90,8 @@ export default function ClaimsAnalyticsPage() {
                       <YAxis allowDecimals={false} />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="submitted" name="Submitted Claims" fill="#9333ea" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="paid" name="Paid Claims" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="submitted" name="Submitted Claims" fill="#9333ea" radius={[4, 4, 0, 0]} barSize={40} />
+                      <Bar dataKey="paid" name="Paid Claims" fill="#16a34a" radius={[4, 4, 0, 0]} barSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

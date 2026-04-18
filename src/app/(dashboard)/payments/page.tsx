@@ -32,7 +32,12 @@ import {
   Receipt,
   AlertCircle,
   Printer,
+  CheckCircle,
+  XCircle,
+  Eye,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface Payment {
   id: string;
@@ -56,6 +61,7 @@ interface Payment {
     firstName: string;
     lastName: string;
   };
+  proofOfPayment?: string;
 }
 
 interface Pagination {
@@ -66,6 +72,9 @@ interface Pagination {
 }
 
 export default function PaymentsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "DIRECTOR" || user?.role === "SUPER_ADMIN";
+  
   const [payments, setPayments] = useState<Payment[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -76,6 +85,7 @@ export default function PaymentsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [summary, setSummary] = useState({
     todayTotal: 0,
     monthTotal: 0,
@@ -114,6 +124,31 @@ export default function PaymentsPage() {
     }, 300);
     return () => clearTimeout(debounce);
   }, [fetchPayments]);
+
+  const handleConfirmPayment = async (id: string) => {
+    if (!confirm("Are you sure you want to confirm this payment? This will update the policy status and record the payment as official.")) return;
+    
+    setConfirmingId(id);
+    try {
+      const res = await fetch(`/api/payments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CONFIRMED" }),
+      });
+
+      if (res.ok) {
+        toast.success("Payment confirmed successfully");
+        fetchPayments();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to confirm payment");
+      }
+    } catch (err) {
+      toast.error("An error occurred while confirming payment");
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -283,11 +318,42 @@ export default function PaymentsPage() {
                         {payment.receivedBy.firstName} {payment.receivedBy.lastName}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Link href={`/payments/${payment.id}/receipt`}>
-                          <Button variant="ghost" size="icon" title="Print Receipt">
-                            <Printer className="h-4 w-4 text-purple-600" />
-                          </Button>
-                        </Link>
+                        <div className="flex justify-end gap-1">
+                          {payment.proofOfPayment && (
+                            <a 
+                              href={payment.proofOfPayment} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              title="View Proof of Payment"
+                            >
+                              <Button variant="ghost" size="icon">
+                                <Eye className="h-4 w-4 text-blue-600" />
+                              </Button>
+                            </a>
+                          )}
+                          
+                          {isAdmin && payment.status === "PENDING" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Confirm Payment"
+                              onClick={() => handleConfirmPayment(payment.id)}
+                              disabled={confirmingId === payment.id}
+                            >
+                              {confirmingId === payment.id ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              )}
+                            </Button>
+                          )}
+
+                          <Link href={`/payments/${payment.id}/receipt`}>
+                            <Button variant="ghost" size="icon" title="Print Receipt">
+                              <Printer className="h-4 w-4 text-purple-600" />
+                            </Button>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

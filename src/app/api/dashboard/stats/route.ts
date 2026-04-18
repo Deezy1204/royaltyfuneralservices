@@ -114,23 +114,30 @@ export async function GET() {
       });
     }
 
+    let pendingPayments = 0;
     let monthlyRevenue = 0;
     const paymentsByMethodMap: Record<string, number> = {};
 
     if (paymentsSnap && paymentsSnap.exists()) {
       paymentsSnap.forEach(p => {
         const val = p.val();
-        if (val && !val.deletedAt && val.status === "CONFIRMED" && val.paymentDate) {
+        if (val && !val.deletedAt) {
           if (isAgent && val.agentId !== user.userId && val.createdById !== user.userId) return;
 
-          if (val.paymentMethod) {
-            const method = String(val.paymentMethod).toUpperCase().trim();
-            paymentsByMethodMap[method] = (paymentsByMethodMap[method] || 0) + 1;
+          if (val.status === "PENDING") {
+            pendingPayments++;
           }
-          
-          const pDate = new Date(val.paymentDate).getTime();
-          if (!isNaN(pDate) && pDate >= startOfMonth) {
-            monthlyRevenue += (Number(val.amount) || 0);
+
+          if (val.status === "CONFIRMED" && val.paymentDate) {
+            if (val.paymentMethod) {
+              const method = String(val.paymentMethod).toUpperCase().trim();
+              paymentsByMethodMap[method] = (paymentsByMethodMap[method] || 0) + 1;
+            }
+            
+            const pDate = new Date(val.paymentDate).getTime();
+            if (!isNaN(pDate) && pDate >= startOfMonth) {
+              monthlyRevenue += (Number(val.amount) || 0);
+            }
           }
         }
       });
@@ -148,6 +155,7 @@ export async function GET() {
       totalClaims,
       pendingClaims,
       pendingAlterations,
+      pendingPayments,
       monthlyRevenue,
       claimsPaid: claimsPaidSum,
       policiesByPlan,

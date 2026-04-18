@@ -11,8 +11,9 @@ import { formatDate, formatCurrency, PLAN_COLORS, STATUS_COLORS } from "@/lib/ut
 import { differenceInDays } from "date-fns";
 import {
     ArrowLeft, Edit, FileText, CreditCard, User, Phone, Mail,
-    MapPin, Briefcase, Building2, CreditCard as BankIcon, FileCheck, Clock, Shield, Printer
+    MapPin, Briefcase, Building2, CreditCard as BankIcon, FileCheck, Clock, Shield, Printer, Share2
 } from "lucide-react";
+import { ShareDocumentButton } from "@/components/ui/ShareDocumentButton";
 
 interface Client {
     id: string;
@@ -148,6 +149,22 @@ export default function ClientDetailPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    <ShareDocumentButton 
+                        title={`Client: ${client.firstName} ${client.lastName}`}
+                        text={`Details for client ${client.clientNumber}`}
+                        formattedText={`
+*ROYALTY FUNERAL SERVICES*
+*CLIENT PROFILE*
+
+*Name:* ${client.title} ${client.firstName} ${client.lastName}
+*Client No:* ${client.clientNumber}
+*ID Number:* ${client.idNumber}
+*Phone:* ${client.phone}
+*Address:* ${client.streetAddress}, ${client.city}
+
+*Status:* ${client.isActive ? "ACTIVE" : "INACTIVE"}
+                        `.trim()}
+                    />
                     <Button variant="outline" onClick={() => window.print()}>
                         <Printer className="mr-2 h-4 w-4" /> Print
                     </Button>
