@@ -21,11 +21,13 @@ import {
 import { formatDate, formatCurrency, STATUS_COLORS } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ShareDocumentButton } from "@/components/ui/ShareDocumentButton";
+import { useLoading } from "@/components/providers/LoadingProvider";
 
 export default function AlterationDetailPage() {
     const { id } = useParams();
     const router = useRouter();
     const { user } = useAuth();
+    const { startLoading, stopLoading } = useLoading();
     const [alteration, setAlteration] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -54,6 +56,7 @@ export default function AlterationDetailPage() {
     const handleAction = async (status: string) => {
         if (!confirm(`Are you sure you want to ${status.toLowerCase()} this alteration?`)) return;
 
+        startLoading(status === "APPROVED" ? "Applying Changes..." : "Rejecting Alteration...");
         setUpdating(true);
         try {
             const res = await fetch(`/api/alterations/${id}`, {
@@ -75,6 +78,7 @@ export default function AlterationDetailPage() {
             alert("An error occurred while updating");
         } finally {
             setUpdating(false);
+            stopLoading();
         }
     };
 

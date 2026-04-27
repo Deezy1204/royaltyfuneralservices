@@ -158,13 +158,22 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
 *PROPOSAL SUMMARY*
 
 *Proposal No:* ${proposal.proposalNumber}
-*Client:* ${proposal.clientTitle} ${proposal.clientFirstName} ${proposal.clientLastName}
-*Plan:* ${proposal.planType} (${proposal.planServiceType || "SERVICE"})
-*Premium:* ${formatCurrency(proposal.proposedPremium)}
-
 *Status:* ${proposal.status.replace("_", " ")}
 *Date:* ${formatDate(proposal.createdAt)}
 
+*CLIENT DETAILS*
+*Name:* ${proposal.clientTitle} ${proposal.clientFirstName} ${proposal.clientLastName}
+*ID:* ${proposal.clientIdNumber}
+*Marital Status:* ${proposal.maritalStatus || "N/A"}
+*Phone:* ${proposal.clientPhone}
+
+*PLAN DETAILS*
+*Plan:* ${proposal.planType} (${proposal.planServiceType || "SERVICE"})
+*Premium:* ${formatCurrency(proposal.proposedPremium)}
+*Payment:* ${proposal.paymentMethod.replace("_", " ")} (${proposal.paymentFrequency})
+
+${dependents.length > 0 ? `*DEPENDENTS (${dependents.length})*\n${dependents.map((d: any) => `· ${d.firstName} ${d.lastName} (${d.relationship})`).join("\n")}\n` : ""}
+${beneficiaries.length > 0 ? `*BENEFICIARIES (${beneficiaries.length})*\n${beneficiaries.map((b: any) => `· ${b.firstName} ${b.lastName} (${b.relationship})`).join("\n")}\n` : ""}
 _A Dignified Send-Off_
                         `.trim()}
                     />

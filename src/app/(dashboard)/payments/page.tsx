@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { useLoading } from "@/components/providers/LoadingProvider";
 
 interface Payment {
   id: string;
@@ -84,16 +85,15 @@ export default function PaymentsPage() {
   });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [loading, setLoading] = useState(true);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const { startLoading, stopLoading } = useLoading();
   const [summary, setSummary] = useState({
     todayTotal: 0,
     monthTotal: 0,
     pendingCount: 0,
   });
 
-  const fetchPayments = useCallback(async () => {
-    setLoading(true);
+  const fetchPayments = useCallback(async (silent = false) => {
+    if (!silent) startLoading("Fetching payments...");
     try {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
@@ -114,9 +114,9 @@ export default function PaymentsPage() {
     } catch (error) {
       console.error("Failed to fetch payments:", error);
     } finally {
-      setLoading(false);
+      if (!silent) stopLoading();
     }
-  }, [pagination.page, pagination.limit, search, status]);
+  }, [pagination.page, pagination.limit, search, status, startLoading, stopLoading]);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -128,7 +128,7 @@ export default function PaymentsPage() {
   const handleConfirmPayment = async (id: string) => {
     if (!confirm("Are you sure you want to confirm this payment? This will update the policy status and record the payment as official.")) return;
     
-    setConfirmingId(id);
+    startLoading("Confirming payment...");
     try {
       const res = await fetch(`/api/payments/${id}`, {
         method: "PATCH",
@@ -138,7 +138,7 @@ export default function PaymentsPage() {
 
       if (res.ok) {
         toast.success("Payment confirmed successfully");
-        fetchPayments();
+        fetchPayments(true);
       } else {
         const data = await res.json();
         toast.error(data.error || "Failed to confirm payment");
@@ -146,7 +146,7 @@ export default function PaymentsPage() {
     } catch (err) {
       toast.error("An error occurred while confirming payment");
     } finally {
-      setConfirmingId(null);
+      stopLoading();
     }
   };
 
@@ -246,11 +246,7 @@ export default function PaymentsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
-            </div>
-          ) : payments.length === 0 ? (
+          {payments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <CreditCard className="h-12 w-12 text-gray-300" />
               <h3 className="mt-4 text-lg font-medium text-gray-900">No payments found</h3>
@@ -338,13 +334,8 @@ export default function PaymentsPage() {
                               size="icon"
                               title="Confirm Payment"
                               onClick={() => handleConfirmPayment(payment.id)}
-                              disabled={confirmingId === payment.id}
                             >
-                              {confirmingId === payment.id ? (
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
-                              ) : (
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                              )}
+                              <CheckCircle className="h-4 w-4 text-green-600" />
                             </Button>
                           )}
 

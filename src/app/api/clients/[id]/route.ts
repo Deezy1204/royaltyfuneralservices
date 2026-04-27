@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { ref, get, set, remove, child } from "firebase/database";
+import { ref, get, set, remove, child, update } from "firebase/database";
 import { getCurrentUser, createAuditLog } from "@/lib/auth";
 import { sanitizeForFirebase } from "@/lib/utils";
 
@@ -100,7 +100,8 @@ export async function PUT(
       phone: body.phone ?? previousData.phone,
       altPhone: body.altPhone ?? previousData.altPhone,
       email: body.email ?? previousData.email,
-      streetAddress: body.streetAddress ?? previousData.streetAddress,
+      address: body.address ?? previousData.address,
+      streetAddress: body.streetAddress ?? body.address ?? previousData.streetAddress,
       suburb: body.suburb ?? previousData.suburb,
       city: body.city ?? previousData.city,
       province: body.province ?? previousData.province,
@@ -118,7 +119,37 @@ export async function PUT(
       updatedBy: user.userId,
     };
 
-    await set(ref(db, `clients/${id}`), sanitizeForFirebase(updatedClient));
+    const updates: any = {};
+    updates[`clients/${id}`] = sanitizeForFirebase(updatedClient);
+
+    // If policy update requested
+    if (body.policyId) {
+      const polRef = child(ref(db), `policies/${body.policyId}`);
+      const polSnap = await get(polRef);
+      if (polSnap.exists()) {
+        const previousPolicy = polSnap.val();
+        const updatedPolicy = {
+          ...previousPolicy,
+          planType: body.planType ?? previousPolicy.planType,
+          planServiceType: body.planServiceType ?? previousPolicy.planServiceType,
+          paymentFrequency: body.paymentFrequency ?? previousPolicy.paymentFrequency,
+          premiumAmount: body.premiumAmount !== undefined ? Number(body.premiumAmount) : previousPolicy.premiumAmount,
+          status: body.status ?? previousPolicy.status,
+          paymentMethod: body.paymentMethod ?? previousPolicy.paymentMethod,
+          notes: body.notes ?? previousPolicy.notes,
+          updatedAt: new Date().toISOString(),
+          updatedBy: user.userId,
+        };
+        updates[`policies/${body.policyId}`] = sanitizeForFirebase(updatedPolicy);
+
+        await createAuditLog(
+          user.userId, "UPDATE", "policy", body.policyId, "Policy",
+          previousPolicy, updatedPolicy, `Updated policy ${previousPolicy.policyNumber} via client edit`
+        );
+      }
+    }
+
+    await update(ref(db), updates);
 
     await createAuditLog(
       user.userId,

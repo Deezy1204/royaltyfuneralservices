@@ -14,9 +14,10 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
-import { Search, FileSignature, Eye, MoreHorizontal, Trash2 } from "lucide-react";
+import { Search, FileSignature, Eye, MoreHorizontal, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { useLoading } from "@/components/providers/LoadingProvider";
 
 interface Declaration {
     id: string;
@@ -39,6 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function DeclarationsPage() {
+    const { startLoading, stopLoading } = useLoading();
     const [declarations, setDeclarations] = useState<Declaration[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -50,8 +52,8 @@ export default function DeclarationsPage() {
         });
     }, []);
 
-    const fetchDeclarations = useCallback(async () => {
-        setLoading(true);
+    const fetchDeclarations = useCallback(async (silent = false) => {
+        if (!silent) startLoading("Fetching declarations...");
         try {
             const res = await fetch("/api/declarations");
             if (res.ok) {
@@ -61,9 +63,9 @@ export default function DeclarationsPage() {
         } catch (error) {
             console.error("Failed to fetch declarations:", error);
         } finally {
-            setLoading(false);
+            if (!silent) stopLoading();
         }
-    }, []);
+    }, [startLoading, stopLoading]);
 
     useEffect(() => {
         fetchDeclarations();
@@ -79,7 +81,27 @@ export default function DeclarationsPage() {
         }
     };
 
-    const isAdmin = userRole === "ADMIN";
+    const isAdmin = userRole === "ADMIN" || userRole === "DIRECTOR";
+
+    const handleStatusChange = async (id: string, newStatus: string) => {
+        if (!confirm(`Are you sure you want to ${newStatus.toLowerCase()} this declaration?`)) return;
+        
+        startLoading(newStatus === "APPROVED" ? "Approving Declaration..." : "Rejecting Declaration...");
+        try {
+            const res = await fetch(`/api/declarations/${id}/approve`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (res.ok) {
+                fetchDeclarations();
+            }
+        } catch (error) {
+            console.error("Failed to update status:", error);
+        } finally {
+            stopLoading();
+        }
+    };
 
     const filteredDeclarations = declarations.filter(
         (d) =>
@@ -116,11 +138,7 @@ export default function DeclarationsPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {loading ? (
-                        <div className="flex items-center justify-center py-8">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
-                        </div>
-                    ) : filteredDeclarations.length === 0 ? (
+                    {filteredDeclarations.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 text-center">
                             <FileSignature className="h-12 w-12 text-gray-300" />
                             <h3 className="mt-4 text-lg font-medium text-gray-900">No declarations found</h3>
@@ -181,6 +199,25 @@ export default function DeclarationsPage() {
                                                             View Details
                                                         </Link>
                                                     </DropdownMenuItem>
+                                                    {isAdmin && dec.status === "PENDING" && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleStatusChange(dec.id, "APPROVED")}
+                                                                className="text-green-600 font-semibold"
+                                                            >
+                                                                <CheckCircle className="mr-2 h-4 w-4" />
+                                                                Approve Declaration
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => handleStatusChange(dec.id, "REJECTED")}
+                                                                className="text-red-600 font-semibold"
+                                                            >
+                                                                <XCircle className="mr-2 h-4 w-4" />
+                                                                Reject Declaration
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
                                                     {isAdmin && (
                                                         <>
                                                             <DropdownMenuSeparator />

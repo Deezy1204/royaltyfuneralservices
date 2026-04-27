@@ -159,10 +159,12 @@ export default function ClientDetailPage() {
 *Name:* ${client.title} ${client.firstName} ${client.lastName}
 *Client No:* ${client.clientNumber}
 *ID Number:* ${client.idNumber}
+*Marital Status:* ${client.maritalStatus || "N/A"}
 *Phone:* ${client.phone}
 *Address:* ${client.streetAddress}, ${client.city}
-
 *Status:* ${client.isActive ? "ACTIVE" : "INACTIVE"}
+
+${client.policies.length > 0 ? `*POLICIES (${client.policies.length})*\n${client.policies.map((p: any) => `· ${p.policyNumber} - ${p.planType} (${p.status})`).join("\n")}` : "*No active policies*"}
                         `.trim()}
                     />
                     <Button variant="outline" onClick={() => window.print()}>
@@ -331,7 +333,8 @@ export default function ClientDetailPage() {
                                             {(() => {
                                                 const totalMonthly = Number(policy.premiumAmount) || 0;
                                                 const dependentsTotal = Object.values(policy.dependents || {}).reduce((acc: number, dep: any) => acc + (Number(dep.premium) || 0), 0);
-                                                const basePremium = totalMonthly - dependentsTotal;
+                                                const insuredExtra = policy.isInsured === "Yes" ? 1 : 0;
+                                                const basePremium = totalMonthly - dependentsTotal - insuredExtra;
                                                 return (
                                                     <>
                                                         <span className="text-gray-500">Base Premium:</span>
@@ -339,6 +342,13 @@ export default function ClientDetailPage() {
 
                                                         <span className="text-gray-500">Dependents Premium:</span>
                                                         <span className="font-medium">{formatCurrency(dependentsTotal)}</span>
+
+                                                        {insuredExtra > 0 && (
+                                                            <>
+                                                                <span className="text-gray-500">Insured Extra:</span>
+                                                                <span className="font-medium">{formatCurrency(insuredExtra)}</span>
+                                                            </>
+                                                        )}
 
                                                         <span className="text-gray-500 font-bold border-t pt-1 mt-1">Total Monthly Premium:</span>
                                                         <span className="font-bold text-purple-700 border-t pt-1 mt-1">{formatCurrency(totalMonthly)}</span>

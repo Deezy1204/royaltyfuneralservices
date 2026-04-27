@@ -134,13 +134,14 @@ export async function PUT(
               }
 
               // Check payments
-              const paymentsQuery = query(ref(db, 'payments'), orderByChild('policyId'), equalTo(existing.policyId));
-              const paymentsSnap = await get(paymentsQuery);
+              const paymentsRef = ref(db, 'payments');
+              const paymentsSnap = await get(paymentsRef);
               let totalMonthsPaid = 0;
 
               if (paymentsSnap.exists()) {
                 paymentsSnap.forEach(p => {
                   const payData = p.val();
+                  if (payData.policyId !== existing.policyId) return;
                   if (payData.status === "CONFIRMED" || payData.status === "COMPLETED" || payData.status === "SUCCESS") {
                     // Extract number of months from monthsCovered if present, else assume 1 month
                     let months = 1;
@@ -208,6 +209,22 @@ export async function PUT(
     }
 
     await update(claimRef, sanitizeForFirebase(updateData));
+
+    // Synchronize with linked Declaration if status changed
+    if (body.status && existing.declarationId) {
+      try {
+        const declRef = child(ref(db), `declarations/${existing.declarationId}`);
+        await update(declRef, { 
+          status: body.status,
+          updatedAt: new Date().toISOString(),
+          updatedBy: user.userId
+        });
+      } catch (declError) {
+        console.error("Failed to sync declaration status:", declError);
+        // We don't fail the whole request if declaration sync fails, but we log it
+      }
+    }
+
     const updatedClaim = { ...existing, ...updateData, id };
 
     await createAuditLog(

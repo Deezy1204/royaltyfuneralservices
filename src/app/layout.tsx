@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from 'sonner';
+import { LoadingProvider } from "@/components/providers/LoadingProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,8 +30,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`} suppressHydrationWarning>
       <body className="antialiased bg-background text-foreground font-sans">
-        {children}
-        <Toaster position="top-right" richColors />
+        <LoadingProvider>
+          {children}
+          <Toaster position="top-right" richColors />
+        </LoadingProvider>
       </body>
     </html>
   );

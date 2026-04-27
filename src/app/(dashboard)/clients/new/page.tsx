@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Save, User, MapPin, Briefcase, Building2 } from "lucide-react";
+import { useLoading } from "@/components/providers/LoadingProvider";
 
 const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Dr", "Prof", "Rev"];
 const GENDERS = ["Male", "Female", "Other"];
@@ -34,6 +35,7 @@ const ACCOUNT_TYPES = ["Savings", "Cheque", "Current", "Transmission"];
 
 export default function NewClientPage() {
   const router = useRouter();
+  const { startLoading, stopLoading } = useLoading();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
@@ -71,6 +73,7 @@ export default function NewClientPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    startLoading("Registering Client...");
     setLoading(true);
 
     try {
@@ -91,6 +94,7 @@ export default function NewClientPage() {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+      stopLoading();
     }
   };
 

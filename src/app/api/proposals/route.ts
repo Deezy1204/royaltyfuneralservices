@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
       status: body.status || "DRAFT",
       notes: body.notes,
       isInsured: body.isInsured || "No",
+      maritalStatus: body.maritalStatus || null,
       clientSignature: body.clientSignature || null,
       createdAt: new Date().toISOString(),
       createdBy: user.userId

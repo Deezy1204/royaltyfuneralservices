@@ -28,6 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDate, formatCurrency, STATUS_COLORS, PLAN_COLORS } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useLoading } from "@/components/providers/LoadingProvider";
 import {
   Plus,
   MoreHorizontal,
@@ -103,9 +105,17 @@ export default function AlterationsPage() {
     downgradesMonth: 0,
     dependentsAdded: 0
   });
+  const { user } = useAuth();
+  const { startLoading, stopLoading } = useLoading();
+  const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
+  const isAuthorized = user?.role === "ADMIN" || user?.role === "DIRECTOR";
 
-  const fetchAlterations = useCallback(async () => {
-    setLoading(true);
+  useEffect(() => {
+    fetch("/api/auth/me").then(r => r.json()).then(d => setCurrentUser(d.user)).catch(() => { });
+  }, []);
+
+  const fetchAlterations = useCallback(async (silent = false) => {
+    if (!silent) startLoading("Fetching alterations...");
     try {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
@@ -125,18 +135,19 @@ export default function AlterationsPage() {
     } catch (error) {
       console.error("Failed to fetch alterations:", error);
     } finally {
-      setLoading(false);
+      if (!silent) stopLoading();
     }
-  }, [pagination.page, pagination.limit, status]);
+  }, [pagination.page, pagination.limit, status, startLoading, stopLoading]);
 
   useEffect(() => {
     fetchAlterations();
   }, [fetchAlterations]);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    startLoading(newStatus === "APPROVED" ? "Applying Changes..." : "Rejecting Alteration...");
     try {
       const res = await fetch(`/api/alterations/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -145,6 +156,8 @@ export default function AlterationsPage() {
       }
     } catch (error) {
       console.error("Failed to update status:", error);
+    } finally {
+      stopLoading();
     }
   };
 
@@ -235,11 +248,7 @@ export default function AlterationsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
-            </div>
-          ) : alterations.length === 0 ? (
+          {alterations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <RefreshCw className="h-12 w-12 text-gray-300" />
               <h3 className="mt-4 text-lg font-medium text-gray-900">No alterations found</h3>
@@ -336,22 +345,14 @@ export default function AlterationsPage() {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              {alt.status === "SUBMITTED" && (
-                                <DropdownMenuItem
-                                  onClick={() => handleStatusChange(alt.id, "UNDER_REVIEW")}
-                                >
-                                  <Eye className="mr-2 h-4 w-4 text-purple-600" />
-                                  Start Review
-                                </DropdownMenuItem>
-                              )}
-                              {alt.status === "UNDER_REVIEW" && (
+                              {(alt.status === "SUBMITTED" || alt.status === "UNDER_REVIEW") && isAuthorized && (
                                 <>
                                   <DropdownMenuItem
                                     onClick={() => handleStatusChange(alt.id, "APPROVED")}
                                     className="text-green-600"
                                   >
                                     <CheckCircle className="mr-2 h-4 w-4" />
-                                    Approve
+                                    Apply Changes
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => handleStatusChange(alt.id, "REJECTED")}
@@ -361,15 +362,6 @@ export default function AlterationsPage() {
                                     Reject
                                   </DropdownMenuItem>
                                 </>
-                              )}
-                              {alt.status === "APPROVED" && (
-                                <DropdownMenuItem
-                                  onClick={() => handleStatusChange(alt.id, "APPLIED")}
-                                  className="text-green-600"
-                                >
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Apply Changes
-                                </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>

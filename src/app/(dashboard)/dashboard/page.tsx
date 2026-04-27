@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, PLAN_COLORS } from "@/lib/utils";
 import {
   Users,
   FileText,
@@ -131,12 +131,7 @@ const pendingCards = [
   },
 ];
 
-const planColors: Record<string, string> = {
-  WHITE: "bg-gray-100 text-gray-800",
-  GOLD: "bg-yellow-100 text-yellow-800",
-  BLUE: "bg-blue-100 text-blue-800",
-  PURPLE: "bg-purple-100 text-purple-800",
-};
+
 
 const activityIcons: Record<string, typeof FileText> = {
   proposal: FileText,
@@ -285,7 +280,7 @@ export default function DashboardPage() {
               {stats.policiesByPlan.map((item) => (
                 <div key={item.plan} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge className={planColors[item.plan]}>{item.plan}</Badge>
+                    <Badge className={PLAN_COLORS[item.plan] || "bg-gray-100 text-gray-800"}>{item.plan}</Badge>
                     <span className="text-sm text-gray-600">Plan</span>
                   </div>
                   <span className="font-semibold text-gray-900">{item.count}</span>

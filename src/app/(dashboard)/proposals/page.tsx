@@ -29,6 +29,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDate, formatCurrency, STATUS_COLORS, PLAN_COLORS } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useLoading } from "@/components/providers/LoadingProvider";
 import {
   Plus,
   Search,
@@ -40,6 +42,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 
 interface Proposal {
@@ -78,7 +81,9 @@ const STATUS_OPTIONS = [
 ];
 
 export default function ProposalsPage() {
-  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const { user } = useAuth();
+  const { startLoading, stopLoading } = useLoading();
+  const [proposals, setProposals] = useState<any[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
     limit: 10,
@@ -87,16 +92,15 @@ export default function ProposalsPage() {
   });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
-  const isAdmin = currentUser?.role === "ADMIN";
+  const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "DIRECTOR";
 
   useEffect(() => {
     fetch("/api/auth/me").then(r => r.json()).then(d => setCurrentUser(d.user)).catch(() => { });
   }, []);
 
-  const fetchProposals = useCallback(async () => {
-    setLoading(true);
+  const fetchProposals = useCallback(async (silent = false) => {
+    if (!silent) startLoading("Fetching proposals...");
     try {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
@@ -114,9 +118,9 @@ export default function ProposalsPage() {
     } catch (error) {
       console.error("Failed to fetch proposals:", error);
     } finally {
-      setLoading(false);
+      if (!silent) stopLoading();
     }
-  }, [pagination.page, pagination.limit, search, status]);
+  }, [pagination.page, pagination.limit, search, status, startLoading, stopLoading]);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -126,6 +130,7 @@ export default function ProposalsPage() {
   }, [fetchProposals]);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    startLoading(`Updating proposal status to ${newStatus.replace("_", " ")}...`);
     try {
       const res = await fetch(`/api/proposals/${id}`, {
         method: "PUT",
@@ -133,10 +138,32 @@ export default function ProposalsPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
-        fetchProposals();
+        fetchProposals(true);
       }
     } catch (error) {
       console.error("Failed to update status:", error);
+    } finally {
+      stopLoading();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this proposal?")) return;
+    
+    startLoading("Deleting Proposal...");
+    try {
+      const res = await fetch(`/api/proposals/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Proposal deleted successfully");
+        fetchProposals();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to delete proposal");
+      }
+    } catch (err) {
+      toast.error("An error occurred while deleting");
+    } finally {
+      stopLoading();
     }
   };
 
@@ -188,11 +215,7 @@ export default function ProposalsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
-            </div>
-          ) : proposals.length === 0 ? (
+          {proposals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FileText className="h-12 w-12 text-gray-300" />
               <h3 className="mt-4 text-lg font-medium text-gray-900">No proposals found</h3>
@@ -271,12 +294,13 @@ export default function ProposalsPage() {
                                 View Details
                               </Link>
                             </DropdownMenuItem>
-                            {proposal.status === "DRAFT" && (
-                              <DropdownMenuItem asChild>
-                                <Link href={`/proposals/${proposal.id}/edit`}>
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit Proposal
-                                </Link>
+                            {isAdmin && (
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(proposal.id)}
+                                className="text-red-600 focus:text-red-700"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Proposal
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />

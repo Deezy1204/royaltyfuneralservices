@@ -1,4 +1,4 @@
-const fetch = require('node-fetch'); // Next.js polyfills global fetch in recent Node versions, but let's just use global fetch since Node 18+ has it.
+// Native fetch is available in Node 18+
 
 async function testPOST() {
   const url = "http://localhost:3000/api/auth/login";

@@ -4,6 +4,7 @@ import { db } from "@/lib/firebase";
 import { ref, get, push, set, child, query, orderByChild, equalTo } from "firebase/database";
 import { getCurrentUser, createAuditLog } from "@/lib/auth";
 import { generateNumber, isWaitingPeriodComplete, sanitizeForFirebase } from "@/lib/utils";
+import { DEFAULT_PLANS } from "@/lib/plans";
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,6 +52,8 @@ export async function GET(request: NextRequest) {
       claims = claims.filter(c => agentClientIds.has(c.clientId));
     }
 
+    const claims_isolated_copy = [...claims];
+
     // Filter Search
     if (search) {
       const searchLower = search.toLowerCase();
@@ -65,6 +68,9 @@ export async function GET(request: NextRequest) {
     if (status && status !== "all") {
       claims = claims.filter(c => c.status === status.toUpperCase());
     }
+
+    // Capture unfiltered (but agent-isolated) claims for accurate summary stats
+    const statsBase = [...claims_isolated_copy]; // We need to create this copy above
 
     // Sort
     claims.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -135,23 +141,16 @@ export async function GET(request: NextRequest) {
       };
     }));
 
-    // Compute summary stats from ALL (unfiltered/unpaginated) claims
-    const allClaimsForStats = claims; // already filtered for deletedAt and status
-    // But we want summaries from ALL non-deleted claims, not filtered ones
-    // Need to re-fetch all non-deleted claims for accurate summary
-    const allClaimsSnap = await get(ref(db, 'claims'));
-    let allRaw: any[] = [];
-    if (allClaimsSnap.exists()) {
-      allClaimsSnap.forEach(c => { allRaw.push(c.val()); });
-    }
-    allRaw = allRaw.filter(c => !c.deletedAt);
+    // Compute summary stats from ALL claims accessible to this user (non-deleted, agent-isolated if applicable)
+    // We use the 'statsBase' array captured above (line 70) which is before search/status filters
+    
     const summary = {
-      pending: allRaw.filter(c => c.status === "PENDING").length,
-      underReview: allRaw.filter(c => c.status === "UNDER_REVIEW").length,
-      approved: allRaw.filter(c => c.status === "APPROVED").length,
-      paid: allRaw.filter(c => c.status === "PAID").length,
-      rejected: allRaw.filter(c => c.status === "REJECTED").length,
-      paidAmount: allRaw.filter(c => c.status === "PAID").reduce((sum, c) => sum + (c.claimAmount || 0), 0),
+      pending: statsBase.filter(c => c.status === "PENDING").length,
+      underReview: statsBase.filter(c => c.status === "UNDER_REVIEW").length,
+      approved: statsBase.filter(c => c.status === "APPROVED").length,
+      paid: statsBase.filter(c => c.status === "PAID").length,
+      rejected: statsBase.filter(c => c.status === "REJECTED").length,
+      paidAmount: statsBase.filter(c => c.status === "PAID").reduce((sum, c) => sum + (Number(c.claimAmount) || 0), 0),
     };
 
     return NextResponse.json({
@@ -238,9 +237,8 @@ export async function POST(request: NextRequest) {
       declarantAddress: body.declarantAddress,
 
       burialPlace: body.burialPlace,
-
       claimType: body.claimType || "DEATH",
-      claimAmount: body.claimamount || policy.coverAmount,
+      claimAmount: body.claimAmount || (DEFAULT_PLANS[policy.planType as keyof typeof DEFAULT_PLANS]?.cashBenefit || policy.coverAmount || 0),
       eligibilityCheck: JSON.stringify(eligibilityResults),
       status: body.status || "PENDING",
       createdById: user.userId,
@@ -269,6 +267,20 @@ export async function POST(request: NextRequest) {
           quantity: svc.quantity || 1,
           totalCost: svc.cost * (svc.quantity || 1),
         }));
+      }
+    }
+
+    // Synchronize with linked Declaration
+    if (body.declarationId) {
+      try {
+        const declRef = child(ref(db), `declarations/${body.declarationId}`);
+        await update(declRef, { 
+          status: newClaim.status,
+          updatedAt: new Date().toISOString(),
+          updatedBy: user.userId
+        });
+      } catch (declError) {
+        console.error("Failed to sync declaration status on create:", declError);
       }
     }
 

@@ -45,7 +45,11 @@ import {
   FileSignature,
   Trash2,
   TrendingUp,
+  RefreshCw,
 } from "lucide-react";
+import { useLoading } from "@/components/providers/LoadingProvider";
+import { toast } from "sonner";
+import { PolicyTransferModal } from "@/components/PolicyTransferModal";
 
 interface Claim {
   id: string;
@@ -106,6 +110,7 @@ export default function ClaimsPage() {
   const [loading, setLoading] = useState(true);
   const [summaryStats, setSummaryStats] = useState({ pending: 0, underReview: 0, paid: 0, paidAmount: 0 });
   const [userRole, setUserRole] = useState<string>("");
+  const { startLoading, stopLoading } = useLoading();
 
   // Fetch current user role
   useEffect(() => {
@@ -114,8 +119,8 @@ export default function ClaimsPage() {
     });
   }, []);
 
-  const fetchClaims = useCallback(async () => {
-    setLoading(true);
+  const fetchClaims = useCallback(async (silent = false) => {
+    if (!silent) startLoading("Fetching claims...");
     try {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
@@ -139,9 +144,9 @@ export default function ClaimsPage() {
     } catch (error) {
       console.error("Failed to fetch claims:", error);
     } finally {
-      setLoading(false);
+      if (!silent) stopLoading();
     }
-  }, [pagination.page, pagination.limit, search, status]);
+  }, [pagination.page, pagination.limit, search, status, startLoading, stopLoading]);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -151,6 +156,7 @@ export default function ClaimsPage() {
   }, [fetchClaims]);
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    startLoading(`Updating claim status to ${newStatus.replace("_", " ")}...`);
     try {
       const res = await fetch(`/api/claims/${id}`, {
         method: "PUT",
@@ -158,24 +164,73 @@ export default function ClaimsPage() {
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
-        fetchClaims();
+        toast.success(`Claim status updated to ${newStatus.replace("_", " ")}`);
+        fetchClaims(true);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to update status");
       }
     } catch (error) {
       console.error("Failed to update status:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      stopLoading();
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this claim? This action cannot be undone.")) return;
+    startLoading("Deleting claim...");
     try {
       const res = await fetch(`/api/claims/${id}`, { method: "DELETE" });
-      if (res.ok) fetchClaims();
+      if (res.ok) {
+        toast.success("Claim deleted successfully");
+        fetchClaims(true);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to delete claim");
+      }
     } catch (error) {
       console.error("Failed to delete claim:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      stopLoading();
     }
   };
 
-  const isAdmin = userRole === "ADMIN";
+  const handleTerminatePolicy = async (policyId: string) => {
+    if (!confirm("Are you sure you want to terminate this policy? All cover will cease immediately.")) return;
+    startLoading("Terminating policy...");
+    try {
+      const res = await fetch(`/api/policies/${policyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "TERMINATED" }),
+      });
+      if (res.ok) {
+        toast.success("Policy terminated successfully");
+        fetchClaims(true);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to terminate policy");
+      }
+    } catch (error) {
+      console.error("Failed to terminate policy:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      stopLoading();
+    }
+  };
+
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [selectedClaimForTransfer, setSelectedClaimForTransfer] = useState<any>(null);
+
+  const handleTransferPolicy = (claim: any) => {
+    setSelectedClaimForTransfer(claim);
+    setTransferModalOpen(true);
+  };
+
+  const isAdmin = userRole === "ADMIN" || userRole === "DIRECTOR";
 
   return (
     <div className="space-y-6">
@@ -289,11 +344,7 @@ export default function ClaimsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
-            </div>
-          ) : claims.length === 0 ? (
+          {claims.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FileCheck className="h-12 w-12 text-gray-300" />
               <h3 className="mt-4 text-lg font-medium text-gray-900">No claims found</h3>
@@ -383,12 +434,14 @@ export default function ClaimsPage() {
                             <DropdownMenuSeparator />
                             {claim.status === "PENDING" && (
                               <>
-                                <DropdownMenuItem asChild>
-                                  <Link href={`/claims/new?claimId=${claim.id}&step=declaration`}>
-                                    <FileSignature className="mr-2 h-4 w-4 text-blue-600" />
-                                    Proceed to Declaration
-                                  </Link>
-                                </DropdownMenuItem>
+                                {!claim.declarationId && (
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/claims/new?claimId=${claim.id}&step=declaration`}>
+                                      <FileSignature className="mr-2 h-4 w-4 text-blue-600" />
+                                      Proceed to Declaration
+                                    </Link>
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                   onClick={() => handleStatusChange(claim.id, "UNDER_REVIEW")}
                                 >
@@ -423,6 +476,24 @@ export default function ClaimsPage() {
                                 <DollarSign className="mr-2 h-4 w-4" />
                                 Mark as Paid
                               </DropdownMenuItem>
+                            )}
+                            {claim.status === "PAID" && claim.deceasedType === "PRINCIPAL" && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => handleTerminatePolicy(claim.policyId)}
+                                  className="text-red-600"
+                                >
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Terminate Policy
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleTransferPolicy(claim)}
+                                  className="text-blue-600"
+                                >
+                                  <RefreshCw className="mr-2 h-4 w-4" />
+                                  Transfer Policy
+                                </DropdownMenuItem>
+                              </>
                             )}
                             {isAdmin && (
                               <>
@@ -477,6 +548,13 @@ export default function ClaimsPage() {
           )}
         </CardContent>
       </Card>
+
+      <PolicyTransferModal
+        open={transferModalOpen}
+        onOpenChange={setTransferModalOpen}
+        claim={selectedClaimForTransfer}
+        onSuccess={() => fetchClaims(true)}
+      />
     </div>
   );
 }

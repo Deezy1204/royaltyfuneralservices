@@ -43,6 +43,7 @@ import {
   Shield,
 } from "lucide-react";
 import { differenceInDays } from "date-fns";
+import { useLoading } from "@/components/providers/LoadingProvider";
 
 interface Policy {
   id: string;
@@ -90,10 +91,10 @@ export default function ClientsPage() {
   });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [loading, setLoading] = useState(true);
+  const { startLoading, stopLoading } = useLoading();
 
-  const fetchClients = useCallback(async () => {
-    setLoading(true);
+  const fetchClients = useCallback(async (silent = false) => {
+    if (!silent) startLoading("Fetching clients...");
     try {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
@@ -111,9 +112,9 @@ export default function ClientsPage() {
     } catch (error) {
       console.error("Failed to fetch clients:", error);
     } finally {
-      setLoading(false);
+      if (!silent) stopLoading();
     }
-  }, [pagination.page, pagination.limit, search, status]);
+  }, [pagination.page, pagination.limit, search, status, startLoading, stopLoading]);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -165,11 +166,7 @@ export default function ClientsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
-            </div>
-          ) : clients.length === 0 ? (
+          {clients.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Users className="h-12 w-12 text-gray-300" />
               <h3 className="mt-4 text-lg font-medium text-gray-900">No clients found</h3>
@@ -288,8 +285,14 @@ export default function ClientsPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/payments/new?clientId=${client.id}`}>
-                                <CreditCard className="mr-2 h-4 w-4" />
+                                <CreditCard className="mr-2 h-4 w-4 text-blue-600" />
                                 Record Payment
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/clients/${client.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4 text-purple-600" />
+                                Edit Details
                               </Link>
                             </DropdownMenuItem>
                           </DropdownMenuContent>

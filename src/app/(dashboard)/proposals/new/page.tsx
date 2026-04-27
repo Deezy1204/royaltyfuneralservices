@@ -30,120 +30,12 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { SignatureSelector } from "@/components/SignatureSelector";
+import { useLoading } from "@/components/providers/LoadingProvider";
 
-const DEFAULT_PLANS = {
-  BASIC: {
-    name: "Basic Policy",
-    benefits: ["Repatriation up to 600km"],
-    cashBenefit: 450,
-    ageTiers: [
-      {
-        label: "18 - 64",
-        minAge: 18,
-        maxAge: 64,
-        options: { SINGLE: 2.5, MEMBER_SPOUSE: 3, FAMILY: 3.5, EXTENDED_FAMILY: 3.5 },
-        dependents: { CHILD: 3 }
-      }
-    ]
-  },
-  BRONZE: {
-    name: "Bronze Policy",
-    benefits: ["1 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Repatriation (Over 600km)"],
-    cashBenefit: 450,
-    ageTiers: [
-      {
-        label: "18 - 64",
-        minAge: 18,
-        maxAge: 64,
-        options: { SINGLE: 3.5, MEMBER_SPOUSE: 5, FAMILY: 5.5, EXTENDED_FAMILY: 1.5 },
-        dependents: { CHILD: 4 }
-      },
-      {
-        label: "65 - 74",
-        minAge: 65,
-        maxAge: 74,
-        options: { SINGLE: 4, MEMBER_SPOUSE: 6, FAMILY: 7, EXTENDED_FAMILY: 3 },
-        dependents: { CHILD: 5 }
-      },
-      {
-        label: "75 - 84",
-        minAge: 75,
-        maxAge: 84, // Capped at 84 as per user req
-        options: { SINGLE: 11, MEMBER_SPOUSE: 8.5, FAMILY: 0, EXTENDED_FAMILY: 11 },
-        dependents: { CHILD: 0 }
-      }
-    ]
-  },
-  SILVER: {
-    name: "Royalty Silver",
-    benefits: ["1 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Airtime", "Repatriation (Over 600km)"],
-    cashBenefit: 550,
-    ageTiers: [
-      {
-        label: "18 - 64",
-        minAge: 18,
-        maxAge: 64,
-        options: { SINGLE: 3.5, MEMBER_SPOUSE: 6, FAMILY: 8.5, EXTENDED_FAMILY: 2 },
-        dependents: { CHILD: 5 }
-      },
-      {
-        label: "65 - 74",
-        minAge: 65,
-        maxAge: 74,
-        options: { SINGLE: 4.5, MEMBER_SPOUSE: 7.5, FAMILY: 9.5, EXTENDED_FAMILY: 4.5 },
-        dependents: { CHILD: 6 }
-      },
-      {
-        label: "75 - 84",
-        minAge: 75,
-        maxAge: 84,
-        options: { SINGLE: 11.5, MEMBER_SPOUSE: 9, FAMILY: 0, EXTENDED_FAMILY: 12 },
-        dependents: { CHILD: 0 }
-      }
-    ]
-  },
-  GOLD: {
-    name: "Royalty Gold",
-    benefits: ["3 Tier Casket", "Burial Services", "Complimentary Grocery", "Transport (15 Seater Quantum)", "Grave Tent and Chairs", "Airtime", "Repatriation (Over 600km)"],
-    cashBenefit: 700,
-    ageTiers: [
-      {
-        label: "18 - 64",
-        minAge: 18,
-        maxAge: 64,
-        options: { SINGLE: 5.5, MEMBER_SPOUSE: 10.5, FAMILY: 11.5, EXTENDED_FAMILY: 10.5 },
-        dependents: { CHILD: 9.5 }
-      },
-      {
-        label: "65 - 74",
-        minAge: 65,
-        maxAge: 74,
-        options: { SINGLE: 8, MEMBER_SPOUSE: 23.5, FAMILY: 0, EXTENDED_FAMILY: 11.5 },
-        dependents: { CHILD: 0 }
-      },
-      {
-        label: "75 - 84",
-        minAge: 75,
-        maxAge: 84,
-        options: { SINGLE: 8.5, MEMBER_SPOUSE: 47, FAMILY: 0, EXTENDED_FAMILY: 12 },
-        dependents: { CHILD: 0 }
-      }
-    ]
-  },
-  OPTIONAL_BENEFITS: {
-    ACCIDENTAL_DEATH: [
-      { id: "adb_750", cover: 750, premium: 5 },
-      { id: "adb_1500", cover: 1500, premium: 7.5 },
-      { id: "adb_2000", cover: 2000, premium: 10 }
-    ],
-    SPOUSAL_DEATH: [
-      { id: "sdb_300", cover: 300, premium: 5 },
-      { id: "sdb_600", cover: 600, premium: 10 }
-    ]
-  }
-};
+import { DEFAULT_PLANS } from "@/lib/plans";
 
 const TITLES = ["Mr", "Mrs", "Ms", "Miss", "Dr"];
+const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed", "Separated"];
 const GENDERS = ["Male", "Female"];
 const POLICY_TYPES = ["INDIVIDUAL", "FAMILY"];
 const PAYMENT_FREQUENCIES = ["MONTHLY", "QUARTERLY", "ANNUALLY"];
@@ -170,6 +62,7 @@ interface Beneficiary {
 
 function NewProposalContent() {
   const router = useRouter();
+  const { startLoading, stopLoading } = useLoading();
   const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
 
@@ -196,6 +89,7 @@ function NewProposalContent() {
 
   useEffect(() => {
     const fetchPlans = async () => {
+      startLoading("Initializing plans...");
       try {
         const res = await fetch("/api/plans");
         if (res.ok) {
@@ -214,10 +108,12 @@ function NewProposalContent() {
         }
       } catch (err) {
         console.error("Failed to fetch plans", err);
+      } finally {
+        stopLoading();
       }
     };
     fetchPlans();
-  }, []);
+  }, [startLoading, stopLoading]);
 
   const [formData, setFormData] = useState({
     clientId: clientId || "",
@@ -245,6 +141,7 @@ function NewProposalContent() {
     notes: "",
     accidentalDeathBenefit: "",
     spousalDeathBenefit: "",
+    maritalStatus: "",
     isInsured: "No", // NEW: Yes or No
   });
 
@@ -253,32 +150,38 @@ function NewProposalContent() {
   useEffect(() => {
     if (clientId) {
       const fetchClient = async () => {
-        const res = await fetch(`/api/clients/${clientId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const client = data.client;
-          setFormData((prev) => ({
-            ...prev,
-            clientTitle: client.title || "",
-            clientFirstName: client.firstName,
-            clientLastName: client.lastName,
-            clientIdNumber: client.idNumber,
-            clientDOB: client.dateOfBirth.split("T")[0],
-            clientGender: client.gender,
-            clientPhone: client.phone,
-            clientEmail: client.email || "",
-            clientAddress: client.streetAddress,
-            clientCity: client.city,
-            clientPostalCode: client.postalCode || "",
-            bankName: client.bankName || "",
-            accountNumber: client.accountNumber || "",
-            branchCode: client.branchCode || "",
-          }));
+        startLoading("Loading client data...");
+        try {
+          const res = await fetch(`/api/clients/${clientId}`);
+          if (res.ok) {
+            const data = await res.json();
+            const client = data.client;
+            setFormData((prev) => ({
+              ...prev,
+              clientTitle: client.title || "",
+              clientFirstName: client.firstName,
+              clientLastName: client.lastName,
+              clientIdNumber: client.idNumber,
+              clientDOB: client.dateOfBirth.split("T")[0],
+              clientGender: client.gender,
+              clientPhone: client.phone,
+              clientEmail: client.email || "",
+              clientAddress: client.streetAddress,
+              clientCity: client.city,
+              clientPostalCode: client.postalCode || "",
+              bankName: client.bankName || "",
+              accountNumber: client.accountNumber || "",
+              branchCode: client.branchCode || "",
+              maritalStatus: client.maritalStatus || "",
+            }));
+          }
+        } finally {
+          stopLoading();
         }
       };
       fetchClient();
     }
-  }, [clientId]);
+  }, [clientId, startLoading, stopLoading]);
 
   const handleChange = (field: string, value: string | number) => {
     setFormData((prev) => {
@@ -309,7 +212,11 @@ function NewProposalContent() {
     
     if (age >= 85) age = 84;
 
-    return plan.ageTiers.find((t: any) => age >= t.minAge && age <= t.maxAge) || null;
+    const tier = plan.ageTiers.find((t: any) => age >= t.minAge && age <= t.maxAge);
+    if (!tier && age < plan.ageTiers[0].minAge) {
+      return plan.ageTiers[0];
+    }
+    return tier || null;
   };
 
   const getActiveTier = (planKey: string) => {
@@ -443,13 +350,23 @@ function NewProposalContent() {
       if (opt) total += Number(opt.premium);
     }
     
+    if (formData.isInsured === "Yes") {
+      total += 1;
+    }
+    
     return total;
   };
 
-  const handleSubmit = async (e: React.FormEvent, status: string = "DRAFT") => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    if (!formData.planType) {
+      toast.error("Please select a plan");
+      return;
+    }
+
+    startLoading("Creating Proposal...");
     setLoading(true);
+    setError("");
 
     try {
       const plans = (dbPlans || DEFAULT_PLANS) as any;
@@ -481,10 +398,13 @@ function NewProposalContent() {
 
       const data = await res.json();
       router.push(`/proposals/${data.proposal.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+    } catch (err: any) {
+      console.error("Submit error:", err);
+      setError(err.message || "Something went wrong. Please try again.");
+      toast.error(err.message || "Failed to create proposal");
     } finally {
       setLoading(false);
+      stopLoading();
     }
   };
 
@@ -770,6 +690,20 @@ function NewProposalContent() {
               <SelectContent>
                 {GENDERS.map((g) => (
                   <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={formData.maritalStatus}
+              onValueChange={(v) => handleChange("maritalStatus", v)}
+            >
+              <SelectTrigger label="Marital Status">
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                {MARITAL_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

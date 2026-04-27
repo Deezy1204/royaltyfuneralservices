@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, ArrowRight, Save, Send, FileText, User, Calendar, MapPin, Stethoscope, AlertCircle, Search, FileCheck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { SignatureSelector } from "@/components/SignatureSelector";
+import { DEFAULT_PLANS } from "@/lib/plans";
 
 // Types
 interface DeclarationFormData {
@@ -723,7 +724,16 @@ function NewClaimContent() {
                                 </div>
                             )}
 
-
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-purple-700">Claim Amount (Cash Benefit)</label>
+                                <div className="h-10 rounded-md border border-purple-200 bg-purple-50 px-3 flex items-center text-sm font-bold text-purple-900 shadow-sm">
+                                    {claimData.policyId ? (
+                                        formatCurrency(DEFAULT_PLANS[policies.find(p => p.id === claimData.policyId)?.planType as keyof typeof DEFAULT_PLANS]?.cashBenefit || 0)
+                                    ) : (
+                                        <span className="text-gray-400 font-normal italic">Select a policy to see benefit</span>
+                                    )}
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
 

@@ -33,7 +33,7 @@ const ALTERATION_TYPES = [
     { value: "CHANGE_DETAILS", label: "Change Policy Details" },
 ];
 
-const PLAN_OPTIONS = ["WHITE", "GOLD", "BLUE", "PURPLE"];
+const PLAN_OPTIONS = ["BASIC", "BRONZE", "SILVER", "GOLD"];
 
 function NewAlterationContent() {
     const router = useRouter();

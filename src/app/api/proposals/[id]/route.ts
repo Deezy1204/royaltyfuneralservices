@@ -130,7 +130,8 @@ export async function PUT(
           createdAt: new Date().toISOString(),
           isActive: true,
           agentId: existing.agentId || null,
-          createdById: existing.createdBy || null
+          createdById: existing.createdBy || null,
+          maritalStatus: existing.maritalStatus || null,
         };
         const newClientRef = push(ref(db, 'clients'));
         await set(newClientRef, sanitizeForFirebase(newClient));
