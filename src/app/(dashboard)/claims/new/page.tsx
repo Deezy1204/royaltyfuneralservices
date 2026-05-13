@@ -728,7 +728,7 @@ function NewClaimContent() {
                                 <label className="text-sm font-medium text-purple-700">Claim Amount (Cash Benefit)</label>
                                 <div className="h-10 rounded-md border border-purple-200 bg-purple-50 px-3 flex items-center text-sm font-bold text-purple-900 shadow-sm">
                                     {claimData.policyId ? (
-                                        formatCurrency(DEFAULT_PLANS[policies.find(p => p.id === claimData.policyId)?.planType as keyof typeof DEFAULT_PLANS]?.cashBenefit || 0)
+                                        formatCurrency((DEFAULT_PLANS as any)[policies.find(p => p.id === claimData.policyId)?.planType || ""]?.cashBenefit || 0)
                                     ) : (
                                         <span className="text-gray-400 font-normal italic">Select a policy to see benefit</span>
                                     )}

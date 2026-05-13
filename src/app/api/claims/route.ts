@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
 
       burialPlace: body.burialPlace,
       claimType: body.claimType || "DEATH",
-      claimAmount: body.claimAmount || (DEFAULT_PLANS[policy.planType as keyof typeof DEFAULT_PLANS]?.cashBenefit || policy.coverAmount || 0),
+      claimAmount: body.claimAmount || ((DEFAULT_PLANS as any)[policy.planType]?.cashBenefit || policy.coverAmount || 0),
       eligibilityCheck: JSON.stringify(eligibilityResults),
       status: body.status || "PENDING",
       createdById: user.userId,
