@@ -13,14 +13,21 @@ export async function GET(
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
-    const polRef = child(ref(db), `policies/${id}`);
-    const polSnap = await get(polRef);
+    let polRef = child(ref(db), `policies/${id}`);
+    let polSnap = await get(polRef);
+    let isOld = false;
+    
+    if (!polSnap.exists()) {
+      polRef = child(ref(db), `OldPolicies/${id}`);
+      polSnap = await get(polRef);
+      isOld = true;
+    }
     
     if (!polSnap.exists()) {
       return NextResponse.json({ error: "Policy not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ policy: { id, ...polSnap.val() } });
+    return NextResponse.json({ policy: { id, ...polSnap.val(), isOldPolicy: isOld } });
   } catch (error) {
     console.error("Error fetching policy:", error);
     return NextResponse.json({ error: "Failed to fetch policy" }, { status: 500 });
@@ -38,8 +45,14 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const polRef = child(ref(db), `policies/${id}`);
-    const polSnap = await get(polRef);
+    let polRef = child(ref(db), `policies/${id}`);
+    let polSnap = await get(polRef);
+    
+    if (!polSnap.exists()) {
+      polRef = child(ref(db), `OldPolicies/${id}`);
+      polSnap = await get(polRef);
+    }
+
     if (!polSnap.exists()) {
       return NextResponse.json({ error: "Policy not found" }, { status: 404 });
     }

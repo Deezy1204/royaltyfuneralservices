@@ -19,15 +19,26 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") || "";
     const clientId = searchParams.get("clientId") || "";
 
-    const paymentsRef = ref(db, 'payments');
-    const snapshot = await get(paymentsRef);
+    const [paymentsSnap, oldPaymentsSnap] = await Promise.all([
+      get(ref(db, 'payments')),
+      get(ref(db, 'OldPayments'))
+    ]);
     let payments: any[] = [];
 
-    if (snapshot.exists()) {
-      snapshot.forEach((childSnapshot) => {
+    if (paymentsSnap.exists()) {
+      paymentsSnap.forEach((childSnapshot) => {
         const p = childSnapshot.val();
         if (!p.deletedAt) {
           payments.push({ id: childSnapshot.key, ...p });
+        }
+      });
+    }
+
+    if (oldPaymentsSnap.exists()) {
+      oldPaymentsSnap.forEach((childSnapshot) => {
+        const p = childSnapshot.val();
+        if (!p.deletedAt) {
+          payments.push({ id: childSnapshot.key, ...p, isOldPayment: true });
         }
       });
     }
@@ -68,7 +79,10 @@ export async function GET(request: NextRequest) {
         if (s.exists()) client = s.val();
       }
       if (pay.policyId) {
-        const s = await get(child(ref(db), `policies/${pay.policyId}`));
+        let s = await get(child(ref(db), `policies/${pay.policyId}`));
+        if (!s.exists()) {
+          s = await get(child(ref(db), `OldPolicies/${pay.policyId}`));
+        }
         if (s.exists()) policy = s.val();
       }
       if (pay.receivedById) {

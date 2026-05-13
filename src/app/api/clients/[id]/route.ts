@@ -118,7 +118,16 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const clientSnap = await get(child(ref(db), `clients/${id}`));
+    let clientSnap = await get(child(ref(db), `clients/${id}`));
+    let collectionPath = `clients/${id}`;
+    let isOld = false;
+
+    if (!clientSnap.exists() || clientSnap.val().deletedAt) {
+      clientSnap = await get(child(ref(db), `OldClients/${id}`));
+      collectionPath = `OldClients/${id}`;
+      isOld = true;
+    }
+
     if (!clientSnap.exists() || clientSnap.val().deletedAt) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
@@ -159,15 +168,23 @@ export async function PUT(
     };
 
     const updates: any = {};
-    updates[`clients/${id}`] = sanitizeForFirebase(updatedClient);
+    updates[collectionPath] = sanitizeForFirebase(updatedClient);
 
     const clientName = `${previousData.firstName} ${previousData.lastName}`;
     const performerName = `${user.firstName} ${user.lastName}`;
 
     // If policy update requested
     if (body.policyId) {
-      const polRef = child(ref(db), `policies/${body.policyId}`);
-      const polSnap = await get(polRef);
+      let polRef = child(ref(db), `policies/${body.policyId}`);
+      let polSnap = await get(polRef);
+      let polPath = `policies/${body.policyId}`;
+
+      if (!polSnap.exists() || polSnap.val().deletedAt) {
+        polRef = child(ref(db), `OldPolicies/${body.policyId}`);
+        polSnap = await get(polRef);
+        polPath = `OldPolicies/${body.policyId}`;
+      }
+
       if (polSnap.exists()) {
         const previousPolicy = polSnap.val();
         const updatedPolicy = {
@@ -182,7 +199,7 @@ export async function PUT(
           updatedAt: new Date().toISOString(),
           updatedBy: user.userId,
         };
-        updates[`policies/${body.policyId}`] = sanitizeForFirebase(updatedPolicy);
+        updates[polPath] = sanitizeForFirebase(updatedPolicy);
 
         const policyDiff = generateDiffDescription(previousPolicy, updatedPolicy, {
           planType: "Plan Type",
@@ -243,14 +260,21 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const clientSnap = await get(child(ref(db), `clients/${id}`));
+    let clientSnap = await get(child(ref(db), `clients/${id}`));
+    let collectionPath = `clients/${id}`;
+
+    if (!clientSnap.exists()) {
+      clientSnap = await get(child(ref(db), `OldClients/${id}`));
+      collectionPath = `OldClients/${id}`;
+    }
+
     if (!clientSnap.exists()) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
     // Soft delete
     const existing = clientSnap.val();
-    await set(ref(db, `clients/${id}`), sanitizeForFirebase({
+    await set(ref(db, collectionPath), sanitizeForFirebase({
       ...existing,
       deletedAt: new Date().toISOString(),
       deletedBy: user.userId,

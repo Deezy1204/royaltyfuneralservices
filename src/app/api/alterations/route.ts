@@ -50,12 +50,18 @@ export async function GET(request: NextRequest) {
       let approvedBy = { firstName: "", lastName: "" };
 
       if (alt.policyId) {
-        const policySnap = await get(child(ref(db), `policies/${alt.policyId}`));
+        let policySnap = await get(child(ref(db), `policies/${alt.policyId}`));
+        if (!policySnap.exists()) {
+          policySnap = await get(child(ref(db), `OldPolicies/${alt.policyId}`));
+        }
         if (policySnap.exists()) {
           const p = policySnap.val();
           let client = { firstName: "", lastName: "", clientNumber: "" };
           if (p.clientId) {
-            const cSnap = await get(child(ref(db), `clients/${p.clientId}`));
+            let cSnap = await get(child(ref(db), `clients/${p.clientId}`));
+            if (!cSnap.exists()) {
+              cSnap = await get(child(ref(db), `OldClients/${p.clientId}`));
+            }
             if (cSnap.exists()) client = cSnap.val();
           }
           policy = { ...p, client };

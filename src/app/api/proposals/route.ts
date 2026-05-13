@@ -81,7 +81,10 @@ export async function GET(request: NextRequest) {
       }
 
       if (prop.clientId) {
-        const clientSnap = await get(child(ref(db), `clients/${prop.clientId}`));
+        let clientSnap = await get(child(ref(db), `clients/${prop.clientId}`));
+        if (!clientSnap.exists()) {
+          clientSnap = await get(child(ref(db), `OldClients/${prop.clientId}`));
+        }
         if (clientSnap.exists()) client = clientSnap.val();
       }
 

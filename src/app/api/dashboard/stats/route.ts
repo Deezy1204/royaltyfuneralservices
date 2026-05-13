@@ -16,12 +16,14 @@ export async function GET() {
 
     // Fetch all needed collections
     // Using individual try-catches or a safer Promise.all
-    let clientsSnap, policiesSnap, proposalsSnap, claimsSnap, alterationsSnap, paymentsSnap;
+    let clientsSnap, oldClientsSnap, policiesSnap, oldPoliciesSnap, proposalsSnap, claimsSnap, alterationsSnap, paymentsSnap;
     
     try {
-      [clientsSnap, policiesSnap, proposalsSnap, claimsSnap, alterationsSnap, paymentsSnap] = await Promise.all([
+      [clientsSnap, oldClientsSnap, policiesSnap, oldPoliciesSnap, proposalsSnap, claimsSnap, alterationsSnap, paymentsSnap] = await Promise.all([
         get(ref(db, 'clients')),
+        get(ref(db, 'OldClients')),
         get(ref(db, 'policies')),
+        get(ref(db, 'OldPolicies')),
         get(ref(db, 'proposals')),
         get(ref(db, 'claims')),
         get(ref(db, 'alterations')),
@@ -49,6 +51,18 @@ export async function GET() {
       });
     }
 
+    if (oldClientsSnap && oldClientsSnap.exists()) {
+      oldClientsSnap.forEach(c => {
+        const val = c.val();
+        if (val && !val.deletedAt) {
+          if (isAgent && (val.agentId !== user.userId && val.createdById !== user.userId)) return;
+          
+          totalClients++;
+          if (val.isActive !== false) activeClients++; // Assume active if not explicitly false for old clients
+        }
+      });
+    }
+
     let totalPolicies = 0;
     let activePolicies = 0;
     const policiesByPlanMap: Record<string, number> = {};
@@ -63,6 +77,22 @@ export async function GET() {
           if (val.status === "ACTIVE") {
             activePolicies++;
             const plan = (typeof val.planType === 'string' ? val.planType : "UNKNOWN") || "UNKNOWN";
+            policiesByPlanMap[plan] = (policiesByPlanMap[plan] || 0) + 1;
+          }
+        }
+      });
+    }
+
+    if (oldPoliciesSnap && oldPoliciesSnap.exists()) {
+      oldPoliciesSnap.forEach(p => {
+        const val = p.val();
+        if (val && !val.deletedAt) {
+          if (isAgent && (val.agentId !== user.userId && val.createdById !== user.userId)) return;
+
+          totalPolicies++;
+          if (val.status?.toUpperCase() === "ACTIVE" || val.isActive !== false) {
+            activePolicies++;
+            const plan = (typeof val.planType === 'string' ? val.planType : "OLD_PLAN") || "OLD_PLAN";
             policiesByPlanMap[plan] = (policiesByPlanMap[plan] || 0) + 1;
           }
         }

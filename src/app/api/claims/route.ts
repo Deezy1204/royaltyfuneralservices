@@ -19,15 +19,26 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
 
-    const claimsRef = ref(db, 'claims');
-    const snapshot = await get(claimsRef);
+    const [claimsSnap, oldClaimsSnap] = await Promise.all([
+      get(ref(db, 'claims')),
+      get(ref(db, 'OldClaims'))
+    ]);
     let claims: any[] = [];
 
-    if (snapshot.exists()) {
-      snapshot.forEach((childSnapshot) => {
+    if (claimsSnap.exists()) {
+      claimsSnap.forEach((childSnapshot) => {
         const claim = childSnapshot.val();
         if (!claim.deletedAt) {
           claims.push({ id: childSnapshot.key, ...claim });
+        }
+      });
+    }
+
+    if (oldClaimsSnap.exists()) {
+      oldClaimsSnap.forEach((childSnapshot) => {
+        const claim = childSnapshot.val();
+        if (!claim.deletedAt) {
+          claims.push({ id: childSnapshot.key, ...claim, isOldClaim: true });
         }
       });
     }

@@ -19,8 +19,12 @@ export async function GET(request: NextRequest) {
         // In a real app we'd denormalize data (store client info in policy)
         // For migration, we join in memory.
 
-        const policiesSnap = await get(ref(db, 'policies'));
-        const clientsSnap = await get(ref(db, 'clients'));
+        const [policiesSnap, oldPoliciesSnap, clientsSnap, oldClientsSnap] = await Promise.all([
+            get(ref(db, 'policies')),
+            get(ref(db, 'OldPolicies')),
+            get(ref(db, 'clients')),
+            get(ref(db, 'OldClients'))
+        ]);
 
         let policies: any[] = [];
         const clientsMap: Record<string, any> = {};
@@ -28,6 +32,11 @@ export async function GET(request: NextRequest) {
         if (clientsSnap.exists()) {
             clientsSnap.forEach(c => {
                 clientsMap[c.key!] = c.val();
+            });
+        }
+        if (oldClientsSnap.exists()) {
+            oldClientsSnap.forEach(c => {
+                clientsMap[c.key!] = { ...c.val(), isOldClient: true };
             });
         }
 
@@ -44,6 +53,31 @@ export async function GET(request: NextRequest) {
                         policies.push({
                             id: p.key,
                             ...policy,
+                            client: {
+                                firstName: client.firstName,
+                                lastName: client.lastName,
+                                idNumber: client.idNumber
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        if (oldPoliciesSnap.exists()) {
+            oldPoliciesSnap.forEach(p => {
+                const policy = p.val();
+                if (!policy.deletedAt) {
+                    // Filter by agent if applicable
+                    if (user.role === "AGENT" && policy.agentId !== user.userId && policy.createdById !== user.userId) {
+                        return;
+                    }
+                    const client = clientsMap[policy.clientId];
+                    if (client) {
+                        policies.push({
+                            id: p.key,
+                            ...policy,
+                            isOldPolicy: true,
                             client: {
                                 firstName: client.firstName,
                                 lastName: client.lastName,
