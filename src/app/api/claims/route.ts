@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { ref, get, push, set, child, query, orderByChild, equalTo } from "firebase/database";
+import { ref, get, push, set, child, query, orderByChild, equalTo, update } from "firebase/database";
 import { getCurrentUser, createAuditLog } from "@/lib/auth";
 import { generateNumber, isWaitingPeriodComplete, sanitizeForFirebase } from "@/lib/utils";
 import { DEFAULT_PLANS } from "@/lib/plans";

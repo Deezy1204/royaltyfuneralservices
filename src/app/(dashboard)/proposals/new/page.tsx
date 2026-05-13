@@ -357,7 +357,7 @@ function NewProposalContent() {
     return total;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, status: string = "DRAFT") => {
     e.preventDefault();
     if (!formData.planType) {
       toast.error("Please select a plan");

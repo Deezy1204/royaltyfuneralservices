@@ -30,6 +30,7 @@ interface DocSection {
   subsections: {
     id: string;
     title: string;
+    icon?: React.ReactNode;
     content: React.ReactNode;
   }[];
 }

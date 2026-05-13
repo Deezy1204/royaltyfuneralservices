@@ -48,6 +48,7 @@ interface Proposal {
     debitOrderDay?: number;
     status: string;
     createdAt: string;
+    maritalStatus?: string;
     notes?: string;
     dependentsData?: string;
     beneficiariesData?: string;
