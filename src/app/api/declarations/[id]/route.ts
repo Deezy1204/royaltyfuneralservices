@@ -129,7 +129,7 @@ export async function DELETE(
     try {
         const user = await getCurrentUser();
         if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        if (user.role !== "ADMIN" && user.role !== "DIRECTOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        if (!["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
         const { id } = await params;
         const decSnap = await get(child(ref(db), `declarations/${id}`));

@@ -35,17 +35,19 @@ export async function GET(request: NextRequest) {
     // Agent data isolation
     if (user.role === "AGENT") {
       // First, fetch clients belonging to this agent to get their IDs
-      const clientsRef = ref(db, 'clients');
-      const clientsSnapshot = await get(clientsRef);
+      const clientCollections = ['clients', 'OldClients'];
       const agentClientIds = new Set<string>();
       
-      if (clientsSnapshot.exists()) {
-        clientsSnapshot.forEach(child => {
-          const clientData = child.val();
-          if (clientData.agentId === user.userId || clientData.createdById === user.userId) {
-            agentClientIds.add(child.key as string);
-          }
-        });
+      for (const col of clientCollections) {
+        const clientsSnapshot = await get(ref(db, col));
+        if (clientsSnapshot.exists()) {
+          clientsSnapshot.forEach(child => {
+            const clientData = child.val();
+            if (clientData.agentId === user.userId || clientData.createdById === user.userId) {
+              agentClientIds.add(child.key as string);
+            }
+          });
+        }
       }
       
       // Filter claims to only include those for this agent's clients
@@ -106,7 +108,10 @@ export async function GET(request: NextRequest) {
       let services: any[] = [];
 
       if (claim.clientId) {
-        const clientSnap = await get(child(ref(db), `clients/${claim.clientId}`));
+        let clientSnap = await get(child(ref(db), `clients/${claim.clientId}`));
+        if (!clientSnap.exists()) {
+          clientSnap = await get(child(ref(db), `OldClients/${claim.clientId}`));
+        }
         if (clientSnap.exists()) client = clientSnap.val();
       }
       if (claim.policyId) {
@@ -284,6 +289,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const performerName = `${user.firstName} ${user.lastName}`;
+
     await createAuditLog(
       user.userId,
       "CREATE",
@@ -292,7 +299,7 @@ export async function POST(request: NextRequest) {
       "Claim",
       null,
       newClaim,
-      `Created claim ${claimNumber} for ${body.deceasedName}`
+      `${performerName} created claim ${claimNumber} for ${body.deceasedName}`
     );
 
     return NextResponse.json({ claim: { id: claimId, ...newClaim } }, { status: 201 });

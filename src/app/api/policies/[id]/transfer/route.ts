@@ -41,7 +41,7 @@ export async function POST(
       address: formData.address || "",
       city: formData.city || "",
       postalCode: formData.postalCode || "",
-      status: "ACTIVE",
+      isActive: true,
       createdById: user.userId,
       agentId: policy.agentId || user.userId,
       createdAt: new Date().toISOString(),
@@ -71,6 +71,24 @@ export async function POST(
 
     // 3. Update the Policy
     await update(polRef, sanitizeForFirebase(updatedPolicyData));
+
+    // 4. Delete the old client (deceased principal)
+    if (policy.clientId) {
+      await update(ref(db, `clients/${policy.clientId}`), {
+        deletedAt: new Date().toISOString(),
+        deletedBy: user.userId,
+        status: "DECEASED"
+      });
+    }
+
+    // 5. Update the Claim if provided
+    if (claimId) {
+      await update(ref(db, `claims/${claimId}`), {
+        policyActionTaken: "TRANSFERRED",
+        policyActionDate: new Date().toISOString(),
+        policyActionTaker: user.userId
+      });
+    }
 
     // 4. Audit Log
     await createAuditLog(

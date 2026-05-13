@@ -171,6 +171,7 @@ export default function DashboardPage() {
       case "DIRECTOR": return "Director Dashboard";
       case "SUPER_ADMIN": return "Super Admin Dashboard";
       case "ADMIN": return "Admin Dashboard";
+      case "GENERAL_MANAGER": return "General Manager Dashboard";
       default: return `${user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase()} Dashboard`;
     }
   };

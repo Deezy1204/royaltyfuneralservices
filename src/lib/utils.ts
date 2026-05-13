@@ -96,6 +96,30 @@ export function formatShortDate(date: Date | string | undefined | null): string 
   }).format(parsed);
 }
 
+/**
+ * Parse a date string in DD.MM.YYYY format.
+ */
+export function parseCustomDate(dateStr: string): string | null {
+  if (!dateStr || typeof dateStr !== "string") return null;
+  
+  // Handle DD.MM.YYYY or DD/MM/YYYY or DD-MM-YYYY
+  const parts = dateStr.trim().split(/[\.\/\-]/);
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed
+    const year = parseInt(parts[2], 10);
+    
+    const date = new Date(year, month, day);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  }
+  
+  // Fallback to standard parsing
+  const fallback = new Date(dateStr);
+  return !isNaN(fallback.getTime()) ? fallback.toISOString() : null;
+}
+
 export function generateNumber(prefix: string): string {
   const date = new Date();
   const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
@@ -134,7 +158,24 @@ export function isWaitingPeriodComplete(waitingPeriodEnd: Date | string): boolea
 }
 
 export function getInitials(firstName: string, lastName: string): string {
+  if (!firstName || !lastName) return "??";
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+}
+
+/**
+ * Gets the effective joining date for a client.
+ * Prioritizes inception date from policies, then createdAt.
+ */
+export function getJoinedDate(client: any): string {
+  if (client.policies && client.policies.length > 0) {
+    const sorted = [...client.policies].sort((a, b) => {
+      const dateA = new Date(a.inceptionDate || a.createdAt).getTime();
+      const dateB = new Date(b.inceptionDate || b.createdAt).getTime();
+      return dateA - dateB;
+    });
+    return sorted[0].inceptionDate || sorted[0].createdAt || client.createdAt;
+  }
+  return client.createdAt;
 }
 
 export function slugify(text: string): string {
@@ -175,19 +216,65 @@ export const PLAN_COLORS: Record<string, string> = {
 };
 
 /**
+ * Sanitize a string to be a safe Firebase RTDB key.
+ * Removes characters: . $ # [ ] /
+ */
+export function sanitizeKey(key: string): string {
+  return key.replace(/[\.\$#\[\]\/]/g, "_");
+}
+
+/**
  * Recursively strips `undefined` values from an object before writing to Firebase RTDB.
  * Firebase RTDB does not accept `undefined` — this converts them to `null`.
+ * Also sanitizes keys to ensure they are valid Firebase RTDB keys.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function sanitizeForFirebase<T>(obj: T): T {
   if (obj === undefined) return null as unknown as T;
   if (obj === null || typeof obj !== "object") return obj;
+  if (obj instanceof Date) return obj.toISOString() as unknown as T;
+  
   if (Array.isArray(obj)) {
     return obj.map(item => sanitizeForFirebase(item)) as unknown as T;
   }
+  
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-    result[key] = value === undefined ? null : sanitizeForFirebase(value);
+    const safeKey = sanitizeKey(key);
+    result[safeKey] = value === undefined ? null : sanitizeForFirebase(value);
   }
   return result as T;
+}
+/**
+ * Generate a detailed description of changes between two objects.
+ */
+export function generateDiffDescription(
+  previousData: any,
+  newData: any,
+  fieldLabels: Record<string, string> = {}
+): string {
+  if (!previousData || !newData) return "";
+
+  const changes: string[] = [];
+  const keys = new Set([...Object.keys(previousData), ...Object.keys(newData)]);
+
+  // Fields to ignore (metadata, internal IDs, etc.)
+  const ignoreKeys = ["id", "createdAt", "updatedAt", "lastLogin", "password", "confirmPassword", "deletedAt"];
+
+  keys.forEach((key) => {
+    if (ignoreKeys.includes(key)) return;
+
+    const prevValue = previousData[key];
+    const newValue = newData[key];
+
+    if (JSON.stringify(prevValue) !== JSON.stringify(newValue)) {
+      const label = fieldLabels[key] || key;
+      const displayPrev = prevValue === undefined || prevValue === null ? "None" : String(prevValue);
+      const displayNew = newValue === undefined || newValue === null ? "None" : String(newValue);
+      
+      changes.push(`${label} from "${displayPrev}" to "${displayNew}"`);
+    }
+  });
+
+  return changes.length > 0 ? `Updated ${changes.join(", ")}` : "No significant changes made";
 }

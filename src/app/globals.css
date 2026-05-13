@@ -95,6 +95,21 @@ html.lenis, html.lenis body {
   animation: zoom-in 0.2s ease-out;
 }
 
+@keyframes zoom-out {
+  from {
+    transform: translate(-50%, -48%) scale(1.05);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-zoom-out {
+  animation: zoom-out 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .data-\[state\=open\]\:animate-in[data-state="open"] {
   animation: fade-in 0.2s ease-out, zoom-in 0.2s ease-out;
 }

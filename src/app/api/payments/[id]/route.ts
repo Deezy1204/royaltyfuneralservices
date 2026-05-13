@@ -56,7 +56,7 @@ export async function PATCH(
 ) {
     try {
         const user = await getCurrentUser();
-        if (!user || (user.role !== "ADMIN" && user.role !== "DIRECTOR" && user.role !== "SUPER_ADMIN")) {
+        if (!user || !["ADMIN", "DIRECTOR", "SUPER_ADMIN", "GENERAL_MANAGER"].includes(user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

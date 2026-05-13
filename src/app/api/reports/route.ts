@@ -174,9 +174,13 @@ export async function GET(request: NextRequest) {
 
         const topAgents = Object.entries(agentStatsMap)
             .map(([agentId, stats]) => {
-                const userObj = users[agentId] || {};
+                const userObj = users[agentId];
+                let name = "System Administrator";
+                if (userObj && userObj.isActive && !userObj.deletedAt) {
+                    name = `${userObj.firstName || "Agent"} ${userObj.lastName || ""}`;
+                }
                 return {
-                    name: `${userObj.firstName || "Unknown"} ${userObj.lastName || "Agent"}`,
+                    name: name.trim(),
                     policies: stats.policies,
                     revenue: stats.revenue
                 };

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
 import { ref, get, update, remove } from "firebase/database";
 import { getCurrentUser, createAuditLog } from "@/lib/auth";
-import { sanitizeForFirebase } from "@/lib/utils";
+import { sanitizeForFirebase, generateDiffDescription } from "@/lib/utils";
 
 export async function PUT(
   request: NextRequest,
@@ -12,7 +12,7 @@ export async function PUT(
     const { id } = await params;
     const currentUser = await getCurrentUser();
     
-    if (!currentUser || !["ADMIN", "DIRECTOR"].includes(currentUser.role)) {
+    if (!currentUser || !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(currentUser.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -29,13 +29,13 @@ export async function PUT(
 
     // Access control:
     // DIRECTOR can edit any user.
-    // ADMIN can edit users except ADMIN and DIRECTOR.
-    if (currentUser.role === "ADMIN") {
-      if (existingUser.role === "DIRECTOR" || existingUser.role === "ADMIN") {
-        return NextResponse.json({ error: "Cannot edit Admin or Director accounts" }, { status: 403 });
+    // ADMIN and GENERAL_MANAGER can edit users except ADMIN, DIRECTOR, and GENERAL_MANAGER.
+    if (["ADMIN", "GENERAL_MANAGER"].includes(currentUser.role)) {
+      if (["DIRECTOR", "ADMIN", "GENERAL_MANAGER"].includes(existingUser.role)) {
+        return NextResponse.json({ error: "Cannot edit high-level accounts" }, { status: 403 });
       }
-      if (body.role === "DIRECTOR" || body.role === "ADMIN") {
-        return NextResponse.json({ error: "Cannot elevate account to Admin or Director" }, { status: 403 });
+      if (["DIRECTOR", "ADMIN", "GENERAL_MANAGER"].includes(body.role)) {
+        return NextResponse.json({ error: "Cannot elevate account to high-level role" }, { status: 403 });
       }
     }
 
@@ -44,9 +44,22 @@ export async function PUT(
     if (body.lastName) updates.lastName = body.lastName;
     if (body.phone !== undefined) updates.phone = body.phone;
     if (body.role) updates.role = body.role;
+    if (body.joiningDate !== undefined) updates.joiningDate = body.joiningDate;
     if (body.isActive !== undefined) updates.isActive = body.isActive;
 
     await update(userRef, sanitizeForFirebase(updates));
+
+    const diff = generateDiffDescription(existingUser, updates, {
+      firstName: "First Name",
+      lastName: "Last Name",
+      phone: "Phone",
+      role: "Role",
+      isActive: "Account Status",
+      joiningDate: "Joining Date"
+    });
+
+    const userName = `${existingUser.firstName} ${existingUser.lastName}`;
+    const performerName = `${currentUser.firstName} ${currentUser.lastName}`;
 
     await createAuditLog(
       currentUser.userId,
@@ -56,7 +69,7 @@ export async function PUT(
       "User",
       existingUser,
       { ...existingUser, ...updates },
-      `Updated user: ${updates.firstName || existingUser.firstName}`
+      `${performerName} updated user ${userName}: ${diff}`
     );
 
     return NextResponse.json({ user: { id, ...existingUser, ...updates } });
@@ -74,8 +87,8 @@ export async function DELETE(
     const { id } = await params;
     const currentUser = await getCurrentUser();
     
-    // Only DIRECTOR can delete users, or ADMINs can delete non-DIRECTOR users.
-    if (!currentUser || !["ADMIN", "DIRECTOR"].includes(currentUser.role)) {
+    // Only DIRECTOR can delete users, or ADMINs/GMs can delete non-high-level users.
+    if (!currentUser || !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(currentUser.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -93,8 +106,8 @@ export async function DELETE(
 
     const existingUser = snapshot.val();
 
-    if (currentUser.role === "ADMIN" && (existingUser.role === "DIRECTOR" || existingUser.role === "ADMIN")) {
-      return NextResponse.json({ error: "Cannot delete Admin or Director accounts" }, { status: 403 });
+    if (["ADMIN", "GENERAL_MANAGER"].includes(currentUser.role) && ["DIRECTOR", "ADMIN", "GENERAL_MANAGER"].includes(existingUser.role)) {
+      return NextResponse.json({ error: "Cannot delete high-level accounts" }, { status: 403 });
     }
 
     // Soft delete to preserve referential integrity
@@ -106,14 +119,18 @@ export async function DELETE(
       const updatesToClients: any = {};
       clientsSnap.forEach((child) => {
         const client = child.val();
-        if (client.createdBy === id) {
+        if (client.createdBy === id || client.agentId === id) {
           updatesToClients[`clients/${child.key}/createdBy`] = currentUser.userId;
+          updatesToClients[`clients/${child.key}/agentId`] = currentUser.userId;
         }
       });
       if (Object.keys(updatesToClients).length > 0) {
         await update(ref(db), updatesToClients);
       }
     }
+
+    const userName = `${existingUser.firstName} ${existingUser.lastName}`;
+    const performerName = `${currentUser.firstName} ${currentUser.lastName}`;
 
     await createAuditLog(
       currentUser.userId,
@@ -123,7 +140,7 @@ export async function DELETE(
       "User",
       existingUser,
       { deletedAt: new Date().toISOString(), isActive: false },
-      `Deleted user: ${existingUser.firstName} ${existingUser.lastName}`
+      `${performerName} deleted user: ${userName}`
     );
 
     return NextResponse.json({ success: true });

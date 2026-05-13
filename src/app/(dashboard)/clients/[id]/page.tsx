@@ -47,6 +47,13 @@ interface Client {
     policies: any[];
     claims: any[];
     payments: any[];
+    extraFields?: Record<string, any>;
+    isOldClient?: boolean;
+    agent?: {
+        firstName: string;
+        lastName: string;
+        userId: string;
+    };
 }
 
 export default function ClientDetailPage() {
@@ -201,6 +208,7 @@ ${client.policies.length > 0 ? `*POLICIES (${client.policies.length})*\n${client
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                         {[
+                            { label: "Agent", value: client.agent ? `${client.agent.firstName} ${client.agent.lastName}` : "No Agent Assigned" },
                             { label: "ID Number", value: client.idNumber },
                             { label: "Date of Birth", value: formatDate(client.dateOfBirth) },
                             { label: "Gender", value: client.gender },
@@ -284,6 +292,27 @@ ${client.policies.length > 0 ? `*POLICIES (${client.policies.length})*\n${client
                     </Card>
                 )}
             </div>
+
+            {/* Extra Fields (Manual Upload) */}
+            {client.extraFields && Object.keys(client.extraFields).length > 0 && (
+                <Card className="print:break-inside-avoid shadow-sm">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                            <FileText className="h-4 w-4 text-gray-600" />Additional Information (Imported)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+                            {Object.entries(client.extraFields).map(([label, value]) => (
+                                <div key={label} className="border-b pb-1">
+                                    <span className="text-gray-500 block text-[10px] uppercase">{label}</span>
+                                    <span className="font-medium text-gray-900 break-words">{value?.toString() || "—"}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Policies */}
             <div className="space-y-4 print:break-before-page">

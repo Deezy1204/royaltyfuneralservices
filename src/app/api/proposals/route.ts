@@ -70,7 +70,14 @@ export async function GET(request: NextRequest) {
 
       if (prop.agentId) {
         const agentSnap = await get(child(ref(db), `users/${prop.agentId}`));
-        if (agentSnap.exists()) agent = agentSnap.val();
+        if (agentSnap.exists()) {
+          const aData = agentSnap.val();
+          if (!aData.deletedAt && aData.isActive) {
+            agent = { firstName: aData.firstName, lastName: aData.lastName };
+          } else {
+            agent = { firstName: "System", lastName: "Administrator" };
+          }
+        }
       }
 
       if (prop.clientId) {

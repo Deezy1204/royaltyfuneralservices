@@ -11,6 +11,7 @@ import { getInitials, formatDateTime } from "@/lib/utils";
 
 const ROLE_COLORS: Record<string, string> = {
     ADMIN: "bg-red-100 text-red-800",
+    GENERAL_MANAGER: "bg-purple-100 text-purple-800",
     MANAGER: "bg-purple-100 text-purple-800",
     AGENT: "bg-blue-100 text-blue-800",
     ACCOUNTS: "bg-green-100 text-green-800",
@@ -203,7 +204,7 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-3">
                         <Badge className={`${ROLE_COLORS[user?.role]} text-sm px-3 py-1`}>{user?.role}</Badge>
                         <p className="text-sm text-gray-500">
-                            {user?.role === "ADMIN" && "Full access to all features including user management and approvals."}
+                            {["ADMIN", "GENERAL_MANAGER", "DIRECTOR"].includes(user?.role) && "Full access to all features including user management and approvals."}
                             {user?.role === "MANAGER" && "Access to manage teams, approve proposals, and view all reports."}
                             {user?.role === "AGENT" && "Access to create and manage clients, proposals, and claims."}
                             {user?.role === "ACCOUNTS" && "Access to manage payments and financial records."}

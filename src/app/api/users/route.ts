@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
-    if (!currentUser || !["ADMIN", "DIRECTOR"].includes(currentUser.role)) {
+    if (!currentUser || !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(currentUser.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
     const email = body.email.toLowerCase();
 
     // Enforce role creation limits
-    if (currentUser.role === "ADMIN" && (body.role === "DIRECTOR" || body.role === "ADMIN")) {
-      return NextResponse.json({ error: "Insufficient permissions to create Admin or Director accounts" }, { status: 403 });
+    if (["ADMIN", "GENERAL_MANAGER"].includes(currentUser.role) && (body.role === "DIRECTOR" || body.role === "ADMIN" || body.role === "GENERAL_MANAGER")) {
+      return NextResponse.json({ error: "Insufficient permissions to create high-level accounts" }, { status: 403 });
     }
 
     // Check existing (manual scan to avoid index error)
@@ -113,12 +113,15 @@ export async function POST(request: NextRequest) {
       phone: body.phone,
       role: body.role,
       isActive: true,
+      joiningDate: body.joiningDate || new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
 
     const newUserRef = push(usersRef);
     await set(newUserRef, sanitizeForFirebase(newUser));
     const userId = newUserRef.key;
+
+    const performerName = `${currentUser.firstName} ${currentUser.lastName}`;
 
     await createAuditLog(
       currentUser.userId,
@@ -128,7 +131,7 @@ export async function POST(request: NextRequest) {
       "User",
       null,
       newUser,
-      `Created user: ${newUser.firstName} ${newUser.lastName}`
+      `${performerName} created user: ${newUser.firstName} ${newUser.lastName} (${newUser.role})`
     );
 
     return NextResponse.json({ user: { id: userId, ...newUser } }, { status: 201 });

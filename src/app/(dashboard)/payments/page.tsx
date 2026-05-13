@@ -74,7 +74,7 @@ interface Pagination {
 
 export default function PaymentsPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN" || user?.role === "DIRECTOR" || user?.role === "SUPER_ADMIN";
+  const isAdmin = ["ADMIN", "DIRECTOR", "SUPER_ADMIN", "GENERAL_MANAGER"].includes(user?.role || "");
   
   const [payments, setPayments] = useState<Payment[]>([]);
   const [pagination, setPagination] = useState<Pagination>({

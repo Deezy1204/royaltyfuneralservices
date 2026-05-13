@@ -17,21 +17,36 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
+    const type = searchParams.get("type") || "regular"; // default to regular
 
     // With Firebase RTDB, complex filtering and pagination is hard.
     // For this migration, we will fetch all clients and filter/paginate in memory.
     // This is not scalable for millions of records but suitable for small-medium apps or this migration phase.
 
-    const clientsRef = ref(db, 'clients');
-    const snapshot = await get(clientsRef);
+    // Fetch from both if searching, otherwise stick to type
+    const collectionsToFetch = [];
+    if (search || type === "all") {
+      collectionsToFetch.push('clients', 'OldClients');
+    } else {
+      collectionsToFetch.push(type === "old" ? 'OldClients' : 'clients');
+    }
 
     let clients: any[] = [];
 
-    if (snapshot.exists()) {
-      snapshot.forEach((childSnapshot) => {
-        const client = childSnapshot.val();
-        clients.push({ id: childSnapshot.key, ...client });
-      });
+    for (const collectionPath of collectionsToFetch) {
+      const clientsRef = ref(db, collectionPath);
+      const snapshot = await get(clientsRef);
+
+      if (snapshot.exists()) {
+        snapshot.forEach((childSnapshot) => {
+          const client = childSnapshot.val();
+          clients.push({ 
+            id: childSnapshot.key, 
+            ...client, 
+            isOldClient: collectionPath === 'OldClients' || client.isOldClient 
+          });
+        });
+      }
     }
 
     // Filter by deletion (soft delete check if applicable)
@@ -62,6 +77,15 @@ export async function GET(request: NextRequest) {
       clients = clients.filter(c => !c.isActive);
     }
 
+    // Apply Type Filter (if not searching everything)
+    if (!search && type !== "all") {
+      if (type === "old") {
+        clients = clients.filter(c => c.isOldClient === true);
+      } else {
+        clients = clients.filter(c => !c.isOldClient);
+      }
+    }
+
     // Sort by createdAt desc
     clients.sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
@@ -78,30 +102,60 @@ export async function GET(request: NextRequest) {
     // This creates N+1 problem. For now, let's leave related data empty or do a second fetch if strictly needed.
     // The UI likely needs policy count.
 
-    // Let's fetch policies once to map them.
-    const policiesSnapshot = await get(ref(db, 'policies'));
+    // Let's fetch policies from both collections to map them.
     const policiesMap: Record<string, any[]> = {}; // clientId -> policies
+    const policyCollections = ['policies', 'OldPolicies'];
 
-    if (policiesSnapshot.exists()) {
-      policiesSnapshot.forEach((child) => {
-        const pol = child.val();
-        if (!pol.deletedAt && pol.clientId) {
-          if (!policiesMap[pol.clientId]) policiesMap[pol.clientId] = [];
-          policiesMap[pol.clientId].push({ id: child.key, ...pol });
-        }
+    for (const pCol of policyCollections) {
+      const pSnap = await get(ref(db, pCol));
+      if (pSnap.exists()) {
+        pSnap.forEach((child) => {
+          const pol = child.val();
+          if (!pol.deletedAt && pol.clientId) {
+            if (!policiesMap[pol.clientId]) policiesMap[pol.clientId] = [];
+            policiesMap[pol.clientId].push({ id: child.key, ...pol });
+          }
+        });
+      }
+    }
+
+    // Fetch all users to map agentId to name
+    const usersRef = ref(db, "users");
+    const usersSnap = await get(usersRef);
+    const usersMap: Record<string, any> = {};
+    if (usersSnap.exists()) {
+      usersSnap.forEach((u) => {
+        usersMap[u.key!] = u.val();
       });
     }
 
-    // Enhance clients with basic counts
-    const enhancedClients = paginatedClients.map(client => ({
-      ...client,
-      policies: policiesMap[client.id] || [], // Return actual policies as UI might show details
-      _count: {
-        policies: (policiesMap[client.id] || []).length,
-        dependents: 0, // Implement dependent fetch if needed
-        claims: 0 // Implement claim fetch if needed
-      }
-    }));
+    // Enhance clients with basic counts and agent info
+    const enhancedClients = paginatedClients.map((client) => {
+      const agentId = client.agentId || client.createdBy;
+      const agent = usersMap[agentId];
+      
+      // If agent is deleted or inactive, label as Administrator fallback
+      const displayAgent = agent && !agent.deletedAt && agent.isActive ? {
+        firstName: agent.firstName,
+        lastName: agent.lastName,
+        userId: agent.userId
+      } : {
+        firstName: "System",
+        lastName: "Administrator",
+        userId: "admin"
+      };
+
+      return {
+        ...client,
+        agent: displayAgent,
+        policies: policiesMap[client.id] || [],
+        _count: {
+          policies: (policiesMap[client.id] || []).length,
+          dependents: 0,
+          claims: 0,
+        },
+      };
+    });
 
     return NextResponse.json({
       clients: enhancedClients,
@@ -176,7 +230,9 @@ export async function POST(request: NextRequest) {
       accountType: body.accountType || "",
       createdAt: new Date().toISOString(),
       createdBy: user.userId,
-      isActive: true
+      isActive: true,
+      isOldClient: body.isOldClient || false,
+      extraFields: body.extraFields || {}
     };
 
     const newClientRef = push(clientsRef);

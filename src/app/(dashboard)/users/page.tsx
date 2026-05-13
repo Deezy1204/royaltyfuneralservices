@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDateTime, getInitials } from "@/lib/utils";
+import { formatDateTime, getInitials, formatDate } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Plus,
@@ -49,11 +49,13 @@ interface User {
   role: string;
   isActive: boolean;
   lastLogin: string | null;
+  joiningDate: string | null;
   createdAt: string;
 }
 
 const ROLES = [
   { value: "DIRECTOR", label: "Director", color: "bg-indigo-100 text-indigo-800" },
+  { value: "GENERAL_MANAGER", label: "General Manager", color: "bg-purple-100 text-purple-800" },
   { value: "ADMIN", label: "Administrator", color: "bg-red-100 text-red-800" },
   { value: "AGENT", label: "Agent", color: "bg-blue-100 text-blue-800" },
 ];
@@ -67,13 +69,14 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const isAdminOrDirector = currentUser?.role === "ADMIN" || currentUser?.role === "DIRECTOR";
+  const isAdminOrDirector = currentUser?.role === "ADMIN" || currentUser?.role === "DIRECTOR" || currentUser?.role === "GENERAL_MANAGER";
   const [newUser, setNewUser] = useState({
     email: "",
     firstName: "",
     lastName: "",
     phone: "",
     role: "AGENT",
+    joiningDate: new Date().toISOString().split('T')[0],
     password: "",
     confirmPassword: "",
   });
@@ -128,6 +131,7 @@ export default function UsersPage() {
           lastName: "",
           phone: "",
           role: "AGENT",
+          joiningDate: new Date().toISOString().split('T')[0],
           password: "",
           confirmPassword: "",
         });
@@ -155,6 +159,7 @@ export default function UsersPage() {
           lastName: editingUser.lastName,
           phone: editingUser.phone,
           role: editingUser.role,
+          joiningDate: editingUser.joiningDate,
           isActive: editingUser.isActive
         }),
       });
@@ -250,13 +255,20 @@ export default function UsersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLES.filter(r => currentUser?.role === "DIRECTOR" || (r.value !== "ADMIN" && r.value !== "DIRECTOR")).map((role) => (
+                    {ROLES.filter(r => currentUser?.role === "DIRECTOR" || (!["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(r.value))).map((role) => (
                       <SelectItem key={role.value} value={role.value}>
                         {role.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <Input
+                  label="Joining Date"
+                  type="date"
+                  value={newUser.joiningDate || ""}
+                  onChange={(e) => setNewUser({ ...newUser, joiningDate: e.target.value })}
+                  required
+                />
                 <Input
                   label="Password"
                   type="password"
@@ -323,13 +335,19 @@ export default function UsersPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ROLES.filter(r => currentUser?.role === "DIRECTOR" || (r.value !== "ADMIN" && r.value !== "DIRECTOR")).map((role) => (
+                      {ROLES.filter(r => currentUser?.role === "DIRECTOR" || (!["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(r.value))).map((role) => (
                         <SelectItem key={role.value} value={role.value}>
                           {role.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <Input
+                    label="Joining Date"
+                    type="date"
+                    value={editingUser.joiningDate || ""}
+                    onChange={(e) => setEditingUser({ ...editingUser, joiningDate: e.target.value })}
+                  />
                   <label className="flex items-center space-x-2 text-sm pt-2">
                     <input 
                       type="checkbox" 
@@ -352,7 +370,7 @@ export default function UsersPage() {
         </div>
 
       {/* Role Summary */}
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-4">
         {ROLES.map((role) => (
           <Card key={role.value}>
             <CardContent className="pt-6">
@@ -406,6 +424,7 @@ export default function UsersPage() {
                   <TableHead>Contact</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Joined</TableHead>
                   <TableHead>Last Login</TableHead>
                   {isAdminOrDirector && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
@@ -452,11 +471,14 @@ export default function UsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-gray-500 text-sm">
+                        {user.joiningDate ? formatDate(user.joiningDate) : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-gray-500 text-sm">
                         {user.lastLogin ? formatDateTime(user.lastLogin) : "Never"}
                       </TableCell>
                       {isAdminOrDirector && (
                         <TableCell className="text-right">
-                          {(currentUser?.role === "DIRECTOR" || (user.role !== "ADMIN" && user.role !== "DIRECTOR")) && (
+                          {(currentUser?.role === "DIRECTOR" || (!["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user.role))) && (
                             <>
                               <Button 
                                 variant="ghost" 

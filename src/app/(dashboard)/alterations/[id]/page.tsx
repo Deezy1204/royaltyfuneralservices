@@ -231,7 +231,7 @@ export default function AlterationDetailPage() {
                     </Card>
 
                     {/* Admin Actions */}
-                    {user?.role === "ADMIN" && (alteration.status === "SUBMITTED" || alteration.status === "PENDING") && (
+                    {["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user?.role || "") && (alteration.status === "SUBMITTED" || alteration.status === "PENDING") && (
                         <div className="space-y-3">
                             <Button
                                 className="w-full bg-green-600 hover:bg-green-700"

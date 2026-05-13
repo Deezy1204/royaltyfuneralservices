@@ -268,7 +268,7 @@ export default function SettingsPage() {
                         <SelectValue placeholder="Select a user to manage signature" />
                       </SelectTrigger>
                       <SelectContent>
-                        {users.filter(u => ["ADMIN", "DIRECTOR"].includes(u.role)).map(u => (
+                        {users.filter(u => ["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(u.role)).map(u => (
                           <SelectItem key={u.id} value={u.id}>
                             {u.firstName} {u.lastName} ({u.role})
                           </SelectItem>

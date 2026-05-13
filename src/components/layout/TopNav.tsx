@@ -64,7 +64,7 @@ export function TopNav() {
   };
 
   const filteredNavigation = navigationItems.filter((item) => {
-    if ((item.name === "Settings" || item.name === "Users" || item.name === "Audit Logs") && user?.role !== "ADMIN" && user?.role !== "DIRECTOR") {
+    if ((item.name === "Settings" || item.name === "Users" || item.name === "Audit Logs") && !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user?.role || "")) {
       return false;
     }
     return true;
@@ -215,7 +215,7 @@ export function TopNav() {
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-              {user?.role === "ADMIN" && (
+              {["ADMIN", "GENERAL_MANAGER"].includes(user?.role || "") && (
                 <DropdownMenuItem onClick={() => router.push("/settings")}>
                   <Settings className="mr-2 h-4 w-4" />
                   Settings

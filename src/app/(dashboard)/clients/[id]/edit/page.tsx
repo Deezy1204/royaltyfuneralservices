@@ -37,6 +37,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
     address: "",
     city: "",
     postalCode: "",
+    isActive: true,
     // Policy fields
     policyId: "",
     planType: "",
@@ -73,6 +74,7 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
           address: client.address || "",
           city: client.city || "",
           postalCode: client.postalCode || "",
+          isActive: client.isActive !== undefined ? client.isActive : true,
           policyId: policy?.id || "",
           planType: policy?.planType || "",
           planServiceType: policy?.planServiceType || "SERVICE",
@@ -244,8 +246,23 @@ export default function EditClientPage({ params }: { params: Promise<{ id: strin
               <Label>Postal Code</Label>
               <Input 
                 value={formData.postalCode} 
-                onChange={e => setFormData({...formData, postalCode: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Account Status</Label>
+              <Select
+                value={formData.isActive ? "active" : "inactive"}
+                onValueChange={(v) => setFormData({ ...formData, isActive: v === "active" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>

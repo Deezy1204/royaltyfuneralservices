@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     try {
         const user = await getCurrentUser();
         // Allow ADMIN and DIRECTOR to view audit logs
-        if (!user || (user.role !== "ADMIN" && user.role !== "DIRECTOR")) {
+        if (!user || !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

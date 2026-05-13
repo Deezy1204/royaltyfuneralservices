@@ -16,6 +16,7 @@ import {
   Settings,
   X,
   Shield,
+  BookOpen,
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Users", href: "/users", icon: UserCog },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Audit Logs", href: "/audit-logs", icon: Shield },
+  { name: "Documentation", href: "/system-documentation", icon: BookOpen },
 ];
 
 interface SidebarProps {
@@ -89,7 +91,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <ul className="space-y-1">
               {navigation.map((item) => {
                 // Conditional rendering for admin-only items
-                if ((item.name === "Settings" || item.name === "Users" || item.name === "Audit Logs") && user?.role !== "ADMIN" && user?.role !== "DIRECTOR") {
+                if ((item.name === "Settings" || item.name === "Users" || item.name === "Audit Logs") && !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user?.role || "")) {
                   return null;
                 }
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/");

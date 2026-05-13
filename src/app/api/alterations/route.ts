@@ -64,12 +64,26 @@ export async function GET(request: NextRequest) {
 
       if (alt.createdById) {
         const uSnap = await get(child(ref(db), `users/${alt.createdById}`));
-        if (uSnap.exists()) createdBy = uSnap.val();
+        if (uSnap.exists()) {
+          const uData = uSnap.val();
+          if (!uData.deletedAt && uData.isActive) {
+            createdBy = uData;
+          } else {
+            createdBy = { firstName: "System", lastName: "Administrator" };
+          }
+        }
       }
 
       if (alt.approvedById) {
         const uSnap = await get(child(ref(db), `users/${alt.approvedById}`));
-        if (uSnap.exists()) approvedBy = uSnap.val();
+        if (uSnap.exists()) {
+          const uData = uSnap.val();
+          if (!uData.deletedAt && uData.isActive) {
+            approvedBy = uData;
+          } else {
+            approvedBy = { firstName: "System", lastName: "Administrator" };
+          }
+        }
       }
 
       return {

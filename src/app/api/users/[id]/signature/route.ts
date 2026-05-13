@@ -11,7 +11,7 @@ export async function POST(
     const { id: userId } = await params;
     const currentUser = await getCurrentUser();
     
-    if (!currentUser || !["ADMIN", "DIRECTOR"].includes(currentUser.role)) {
+    if (!currentUser || !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(currentUser.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -49,7 +49,7 @@ export async function DELETE(
   try {
     const { id: userId } = await params;
     const currentUser = await getCurrentUser();
-    if (!currentUser || !["ADMIN", "DIRECTOR"].includes(currentUser.role)) {
+    if (!currentUser || !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(currentUser.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

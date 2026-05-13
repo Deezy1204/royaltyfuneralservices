@@ -27,7 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDate, formatCurrency, PLAN_COLORS } from "@/lib/utils";
+import { formatDate, formatCurrency, PLAN_COLORS, getJoinedDate } from "@/lib/utils";
 import {
   Plus,
   Search,
@@ -41,7 +41,10 @@ import {
   ChevronRight,
   Clock,
   Shield,
+  FileSpreadsheet,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ClientImportDialog } from "@/components/clients/ClientImportDialog";
 import { differenceInDays } from "date-fns";
 import { useLoading } from "@/components/providers/LoadingProvider";
 
@@ -72,6 +75,10 @@ interface Client {
     dependents: number;
     claims: number;
   };
+  agent?: {
+    firstName: string;
+    lastName: string;
+  };
 }
 
 interface Pagination {
@@ -91,6 +98,8 @@ export default function ClientsPage() {
   });
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [activeTab, setActiveTab] = useState("regular");
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const { startLoading, stopLoading } = useLoading();
 
   const fetchClients = useCallback(async (silent = false) => {
@@ -99,6 +108,7 @@ export default function ClientsPage() {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
+        type: activeTab,
       });
       if (search) params.append("search", search);
       if (status !== "all") params.append("status", status);
@@ -114,7 +124,7 @@ export default function ClientsPage() {
     } finally {
       if (!silent) stopLoading();
     }
-  }, [pagination.page, pagination.limit, search, status, startLoading, stopLoading]);
+  }, [pagination.page, pagination.limit, search, status, activeTab, startLoading, stopLoading]);
 
   useEffect(() => {
     const debounce = setTimeout(() => {
@@ -135,8 +145,20 @@ export default function ClientsPage() {
           <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
           <p className="text-gray-500">Manage client records and policies</p>
         </div>
-
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Upload Excel
+          </Button>
+        </div>
       </div>
+
+      <Tabs defaultValue="regular" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+          <TabsTrigger value="regular">Clients</TabsTrigger>
+          <TabsTrigger value="old">Old Clients</TabsTrigger>
+        </TabsList>
+        <TabsContent value={activeTab} className="mt-6">
 
       <Card>
         <CardHeader className="pb-4">
@@ -184,6 +206,7 @@ export default function ClientsPage() {
                     <TableHead>ID Number</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Policy Plan</TableHead>
+                    <TableHead>Agent</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Member Status</TableHead>
                     <TableHead>Joined</TableHead>
@@ -230,6 +253,18 @@ export default function ClientsPage() {
                         )}
                       </TableCell>
                       <TableCell>
+                        {client.agent ? (
+                          <div className="flex items-center gap-2">
+                            <Users className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-700">
+                              {client.agent.firstName} {client.agent.lastName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs italic">No Agent</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={client.isActive ? "success" : "secondary"}>
                           {client.isActive ? "Active" : "Inactive"}
                         </Badge>
@@ -267,7 +302,7 @@ export default function ClientsPage() {
                         })()}
                       </TableCell>
                       <TableCell className="text-gray-500 text-sm">
-                        {formatDate(client.createdAt)}
+                        {formatDate(getJoinedDate(client))}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -336,6 +371,14 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
+      </TabsContent>
+      </Tabs>
+
+      <ClientImportDialog 
+        open={isImportDialogOpen} 
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={() => fetchClients()}
+      />
     </div>
   );
 }

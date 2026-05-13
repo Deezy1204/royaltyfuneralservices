@@ -108,7 +108,7 @@ export default function AlterationsPage() {
   const { user } = useAuth();
   const { startLoading, stopLoading } = useLoading();
   const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
-  const isAuthorized = user?.role === "ADMIN" || user?.role === "DIRECTOR";
+  const isAuthorized = ["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user?.role || "");
 
   useEffect(() => {
     fetch("/api/auth/me").then(r => r.json()).then(d => setCurrentUser(d.user)).catch(() => { });

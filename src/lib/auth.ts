@@ -185,6 +185,7 @@ export const ROLES = {
   AGENT: "AGENT",
   ACCOUNTS: "ACCOUNTS",
   CLAIMS_OFFICER: "CLAIMS_OFFICER",
+  GENERAL_MANAGER: "GENERAL_MANAGER",
 } as const;
 
 export const PERMISSIONS: Record<string, Record<string, string[]>> = {
@@ -247,6 +248,16 @@ export const PERMISSIONS: Record<string, Record<string, string[]>> = {
     reports: ["read"],
     users: [],
     settings: [],
+  },
+  GENERAL_MANAGER: {
+    clients: ["create", "read", "update", "delete", "approve", "export"],
+    proposals: ["create", "read", "update", "delete", "approve", "export"],
+    alterations: ["create", "read", "update", "delete", "approve", "export"],
+    payments: ["create", "read", "update", "delete", "approve", "export"],
+    claims: ["create", "read", "update", "delete", "approve", "export"],
+    reports: ["read", "export"],
+    users: ["create", "read", "update", "delete"],
+    settings: ["read", "update"],
   },
 };
 

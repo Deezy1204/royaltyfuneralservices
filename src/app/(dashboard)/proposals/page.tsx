@@ -93,7 +93,7 @@ export default function ProposalsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [currentUser, setCurrentUser] = useState<{ role: string } | null>(null);
-  const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "DIRECTOR";
+  const isAdmin = ["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(currentUser?.role || "");
 
   useEffect(() => {
     fetch("/api/auth/me").then(r => r.json()).then(d => setCurrentUser(d.user)).catch(() => { });

@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     try {
         const user = await getCurrentUser();
         // Allow ONLY Admins or Directors to update plan configuration
-        if (!user || (user.role !== "ADMIN" && user.role !== "DIRECTOR")) {
+        if (!user || !["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

@@ -126,7 +126,7 @@ export default function DeclarationDetailsPage() {
         }
     };
 
-    const isAdmin = userRole === "ADMIN" || userRole === "DIRECTOR";
+    const isAdmin = ["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(userRole);
     const statusLabel = declaration.status
         ? declaration.status.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
         : "Pending";

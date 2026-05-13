@@ -62,8 +62,8 @@ export async function GET(request: NextRequest) {
     // Group clients by agent
     const agentCommissions = agents.map(agent => {
       // Determine agent commission rate based on tenure: 20% if <= 1 year, else 10%
-      const agentCreatedAt = agent.createdAt ? new Date(agent.createdAt) : new Date();
-      const differenceInYears = (currentDate.getTime() - agentCreatedAt.getTime()) / (1000 * 3600 * 24 * 365.25);
+      const agentJoiningDate = agent.joiningDate ? new Date(agent.joiningDate) : (agent.createdAt ? new Date(agent.createdAt) : new Date());
+      const differenceInYears = (currentDate.getTime() - agentJoiningDate.getTime()) / (1000 * 3600 * 24 * 365.25);
       const commissionRate = differenceInYears <= 1 ? 0.20 : 0.10;
 
       const agentClients = clients.filter(c => c.createdById === agent.id || c.agentId === agent.id || c.assignedAgentId === agent.id);
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = (await getCurrentUser()) as any;
-    if (!user || (user.role !== "DIRECTOR" && user.role !== "ADMIN")) {
+    if (!user || !["DIRECTOR", "ADMIN", "GENERAL_MANAGER"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

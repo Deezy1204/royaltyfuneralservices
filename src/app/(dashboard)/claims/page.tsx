@@ -61,6 +61,9 @@ interface Claim {
   claimAmount: number;
   approvedAmount: number | null;
   status: string;
+  policyId: string;
+  declarationId?: string;
+  policyActionTaken?: string;
   createdAt: string;
   client: {
     clientNumber: string;
@@ -198,15 +201,26 @@ export default function ClaimsPage() {
     }
   };
 
-  const handleTerminatePolicy = async (policyId: string) => {
+  const handleTerminatePolicy = async (policyId: string, claimId?: string) => {
     if (!confirm("Are you sure you want to terminate this policy? All cover will cease immediately.")) return;
     startLoading("Terminating policy...");
     try {
-      const res = await fetch(`/api/policies/${policyId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "TERMINATED" }),
-      });
+      let res;
+      if (claimId) {
+        // Use the claim transfer API which handles both policy and claim status
+        res = await fetch(`/api/claims/${claimId}/transfer`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "TERMINATE" }),
+        });
+      } else {
+        // Fallback for direct policy termination
+        res = await fetch(`/api/policies/${policyId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "TERMINATED" }),
+        });
+      }
       if (res.ok) {
         toast.success("Policy terminated successfully");
         fetchClaims(true);
@@ -230,7 +244,7 @@ export default function ClaimsPage() {
     setTransferModalOpen(true);
   };
 
-  const isAdmin = userRole === "ADMIN" || userRole === "DIRECTOR";
+  const isAdmin = ["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(userRole);
 
   return (
     <div className="space-y-6">
@@ -477,10 +491,10 @@ export default function ClaimsPage() {
                                 Mark as Paid
                               </DropdownMenuItem>
                             )}
-                            {claim.status === "PAID" && claim.deceasedType === "PRINCIPAL" && (
+                            {claim.status === "PAID" && claim.deceasedType === "PRINCIPAL" && !claim.policyActionTaken && (
                               <>
                                 <DropdownMenuItem
-                                  onClick={() => handleTerminatePolicy(claim.policyId)}
+                                  onClick={() => handleTerminatePolicy(claim.policyId, claim.id)}
                                   className="text-red-600"
                                 >
                                   <XCircle className="mr-2 h-4 w-4" />

@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user || (user.role !== "DIRECTOR" && user.role !== "ADMIN")) {
+    if (!user || !["DIRECTOR", "ADMIN", "GENERAL_MANAGER"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -45,6 +45,15 @@ export async function POST(
         terminationReason: "Claim Paid - Deceased Principal Member",
         transferred: false
       });
+
+      // Delete the old client (deceased principal)
+      if (policyData.clientId) {
+        await update(ref(db, `clients/${policyData.clientId}`), {
+          deletedAt: new Date().toISOString(),
+          deletedBy: user.userId,
+          status: "DECEASED"
+        });
+      }
 
       await update(ref(db, `claims/${id}`), {
         policyActionTaker: user.userId,
@@ -85,7 +94,8 @@ export async function POST(
         createdBy: user.userId,
         createdById: user.userId,
         createdAt: new Date().toISOString(),
-        source: "POLICY_TRANSFER"
+        source: "POLICY_TRANSFER",
+        isActive: true
       };
 
       await update(ref(db, `clients/${newClientId}`), sanitizeForFirebase(newClientData));
@@ -113,6 +123,15 @@ export async function POST(
       };
 
       await update(polRef, sanitizeForFirebase(policyUpdate));
+
+      // Delete the old client (deceased principal)
+      if (previousClientId) {
+        await update(ref(db, `clients/${previousClientId}`), {
+          deletedAt: new Date().toISOString(),
+          deletedBy: user.userId,
+          status: "DECEASED"
+        });
+      }
       
       // Update Claim to mark it was handled
       await update(ref(db, `claims/${id}`), {

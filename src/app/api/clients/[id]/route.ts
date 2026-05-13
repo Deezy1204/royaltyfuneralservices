@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
 import { ref, get, set, remove, child, update } from "firebase/database";
 import { getCurrentUser, createAuditLog } from "@/lib/auth";
-import { sanitizeForFirebase } from "@/lib/utils";
+import { sanitizeForFirebase, generateDiffDescription } from "@/lib/utils";
 
 export async function GET(
   request: NextRequest,
@@ -16,51 +16,90 @@ export async function GET(
     }
 
     const { id } = await params;
-    const clientSnap = await get(child(ref(db), `clients/${id}`));
+    
+    // Check regular clients first
+    let clientSnap = await get(child(ref(db), `clients/${id}`));
+    let isOld = false;
+    
+    if (!clientSnap.exists() || clientSnap.val().deletedAt) {
+      // Check old clients
+      clientSnap = await get(child(ref(db), `OldClients/${id}`));
+      isOld = true;
+    }
+
     if (!clientSnap.exists() || clientSnap.val().deletedAt) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const clientData = { id, ...clientSnap.val() };
+    const clientData = { id, ...clientSnap.val(), isOldClient: isOld || clientSnap.val().isOldClient };
+
+    // Fetch agent info
+    let agent = null;
+    const agentId = clientData.agentId || clientData.createdBy;
+    if (agentId) {
+      const agentSnap = await get(child(ref(db), `users/${agentId}`));
+      if (agentSnap.exists()) {
+        const aData = agentSnap.val();
+        if (!aData.deletedAt && aData.isActive) {
+          agent = { firstName: aData.firstName, lastName: aData.lastName, userId: aData.userId };
+        }
+      }
+    }
+
+    if (!agent) {
+      agent = { firstName: "System", lastName: "Administrator", userId: "admin" };
+    }
 
     // Fetch policies for this client
-    const policiesSnap = await get(ref(db, "policies"));
+    const policyCollections = ["policies", "OldPolicies"];
     const policies: any[] = [];
-    if (policiesSnap.exists()) {
-      policiesSnap.forEach((child) => {
-        const pol = child.val();
-        if (!pol.deletedAt && pol.clientId === id) {
-          policies.push({ id: child.key, ...pol });
-        }
-      });
+    
+    for (const col of policyCollections) {
+      const snap = await get(ref(db, col));
+      if (snap.exists()) {
+        snap.forEach((child) => {
+          const pol = child.val();
+          if (!pol.deletedAt && pol.clientId === id) {
+            policies.push({ id: child.key, ...pol });
+          }
+        });
+      }
     }
 
     // Fetch claims for this client
-    const claimsSnap = await get(ref(db, "claims"));
+    const claimCollections = ["claims", "OldClaims"];
     const claims: any[] = [];
-    if (claimsSnap.exists()) {
-      claimsSnap.forEach((child) => {
-        const claim = child.val();
-        if (!claim.deletedAt && claim.clientId === id) {
-          claims.push({ id: child.key, ...claim });
-        }
-      });
+    
+    for (const col of claimCollections) {
+      const snap = await get(ref(db, col));
+      if (snap.exists()) {
+        snap.forEach((child) => {
+          const claim = child.val();
+          if (!claim.deletedAt && claim.clientId === id) {
+            claims.push({ id: child.key, ...claim });
+          }
+        });
+      }
     }
 
     // Fetch payments for this client
-    const paymentsSnap = await get(ref(db, "payments"));
+    const paymentCollections = ["payments", "OldPayments"];
     const payments: any[] = [];
-    if (paymentsSnap.exists()) {
-      paymentsSnap.forEach((child) => {
-        const payment = child.val();
-        if (!payment.deletedAt && payment.clientId === id) {
-          payments.push({ id: child.key, ...payment });
-        }
-      });
+    
+    for (const col of paymentCollections) {
+      const snap = await get(ref(db, col));
+      if (snap.exists()) {
+        snap.forEach((child) => {
+          const payment = child.val();
+          if (!payment.deletedAt && payment.clientId === id) {
+            payments.push({ id: child.key, ...payment });
+          }
+        });
+      }
     }
 
     return NextResponse.json({
-      client: { ...clientData, policies, claims, payments },
+      client: { ...clientData, agent, policies, claims, payments },
     });
   } catch (error) {
     console.error("Error fetching client:", error);
@@ -122,6 +161,9 @@ export async function PUT(
     const updates: any = {};
     updates[`clients/${id}`] = sanitizeForFirebase(updatedClient);
 
+    const clientName = `${previousData.firstName} ${previousData.lastName}`;
+    const performerName = `${user.firstName} ${user.lastName}`;
+
     // If policy update requested
     if (body.policyId) {
       const polRef = child(ref(db), `policies/${body.policyId}`);
@@ -142,14 +184,35 @@ export async function PUT(
         };
         updates[`policies/${body.policyId}`] = sanitizeForFirebase(updatedPolicy);
 
+        const policyDiff = generateDiffDescription(previousPolicy, updatedPolicy, {
+          planType: "Plan Type",
+          planServiceType: "Service Type",
+          premiumAmount: "Premium Amount",
+          status: "Policy Status",
+          paymentFrequency: "Payment Frequency"
+        });
+
         await createAuditLog(
           user.userId, "UPDATE", "policy", body.policyId, "Policy",
-          previousPolicy, updatedPolicy, `Updated policy ${previousPolicy.policyNumber} via client edit`
+          previousPolicy, updatedPolicy, 
+          `${performerName} updated policy ${previousPolicy.policyNumber} (Client: ${clientName}): ${policyDiff}`
         );
       }
     }
 
     await update(ref(db), updates);
+
+    const clientDiff = generateDiffDescription(previousData, updatedClient, {
+      firstName: "First Name",
+      lastName: "Last Name",
+      idNumber: "ID Number",
+      phone: "Phone",
+      address: "Address",
+      streetAddress: "Street Address",
+      isActive: "Active Status",
+      planType: "Plan Type",
+      premiumAmount: "Premium Amount"
+    });
 
     await createAuditLog(
       user.userId,
@@ -159,7 +222,7 @@ export async function PUT(
       "Client",
       previousData,
       updatedClient,
-      `Updated client: ${updatedClient.firstName} ${updatedClient.lastName}`
+      `${performerName} updated client ${clientName}: ${clientDiff}`
     );
 
     return NextResponse.json({ client: { id, ...updatedClient } });

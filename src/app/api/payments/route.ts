@@ -35,17 +35,19 @@ export async function GET(request: NextRequest) {
     // Agent data isolation
     if (user.role === "AGENT") {
       // First, fetch clients belonging to this agent to get their IDs
-      const clientsRef = ref(db, 'clients');
-      const clientsSnapshot = await get(clientsRef);
+      const clientCollections = ['clients', 'OldClients'];
       const agentClientIds = new Set<string>();
       
-      if (clientsSnapshot.exists()) {
-        clientsSnapshot.forEach(child => {
-          const clientData = child.val();
-          if (clientData.agentId === user.userId || clientData.createdById === user.userId) {
-            agentClientIds.add(child.key as string);
-          }
-        });
+      for (const col of clientCollections) {
+        const clientsSnapshot = await get(ref(db, col));
+        if (clientsSnapshot.exists()) {
+          clientsSnapshot.forEach(child => {
+            const clientData = child.val();
+            if (clientData.agentId === user.userId || clientData.createdById === user.userId) {
+              agentClientIds.add(child.key as string);
+            }
+          });
+        }
       }
       
       // Filter payments to only include those for this agent's clients
@@ -59,7 +61,10 @@ export async function GET(request: NextRequest) {
       let receivedBy = { firstName: "", lastName: "" };
 
       if (pay.clientId) {
-        const s = await get(child(ref(db), `clients/${pay.clientId}`));
+        let s = await get(child(ref(db), `clients/${pay.clientId}`));
+        if (!s.exists()) {
+          s = await get(child(ref(db), `OldClients/${pay.clientId}`));
+        }
         if (s.exists()) client = s.val();
       }
       if (pay.policyId) {
@@ -207,6 +212,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch client name for log
+    let clientName = "Unknown Client";
+    const clientSnap = await get(child(ref(db), `clients/${body.clientId}`));
+    if (clientSnap.exists()) {
+      clientName = `${clientSnap.val().firstName} ${clientSnap.val().lastName}`;
+    } else {
+      const oldClientSnap = await get(child(ref(db), `OldClients/${body.clientId}`));
+      if (oldClientSnap.exists()) {
+        clientName = `${oldClientSnap.val().firstName} ${oldClientSnap.val().lastName}`;
+      }
+    }
+
+    const performerName = `${user.firstName} ${user.lastName}`;
+
     await createAuditLog(
       user.userId,
       "CREATE",
@@ -215,7 +234,7 @@ export async function POST(request: NextRequest) {
       "Payment",
       null,
       payment,
-      `Recorded payment ${paymentNumber} of R${body.amount}`
+      `${performerName} recorded payment ${paymentNumber} of ${payment.currency} ${payment.amount} for client ${clientName}`
     );
 
     return NextResponse.json({ payment: { id: paymentId, ...payment } }, { status: 201 });

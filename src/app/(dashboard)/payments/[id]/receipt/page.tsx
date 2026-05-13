@@ -28,7 +28,7 @@ export default function ReceiptPage() {
     const [adminSignature, setAdminSignature] = useState<string | null>(null);
     const [confirming, setConfirming] = useState(false);
     const [showProofModal, setShowProofModal] = useState(false);
-    const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "DIRECTOR" || currentUser?.role === "SUPER_ADMIN";
+    const isAdmin = ["ADMIN", "DIRECTOR", "SUPER_ADMIN", "GENERAL_MANAGER"].includes(currentUser?.role || "");
 
     const receiptRef = useRef<HTMLDivElement>(null);
 

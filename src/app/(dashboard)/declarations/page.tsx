@@ -81,7 +81,7 @@ export default function DeclarationsPage() {
         }
     };
 
-    const isAdmin = userRole === "ADMIN" || userRole === "DIRECTOR";
+    const isAdmin = ["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(userRole);
 
     const handleStatusChange = async (id: string, newStatus: string) => {
         if (!confirm(`Are you sure you want to ${newStatus.toLowerCase()} this declaration?`)) return;

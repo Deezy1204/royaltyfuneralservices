@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { ShieldAlert, Shield, Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { 
     Dialog, 
@@ -51,7 +51,7 @@ export default function AuditLogsPage() {
     const [isCleaning, setIsCleaning] = useState(false);
     
     const { user } = useAuth();
-    const isDirectorOrAdmin = user?.role === "DIRECTOR" || user?.role === "ADMIN";
+    const isDirectorOrAdmin = ["DIRECTOR", "ADMIN", "GENERAL_MANAGER"].includes(user?.role || "");
     const isDirector = user?.role === "DIRECTOR";
     
     const limit = 10;
@@ -279,7 +279,7 @@ export default function AuditLogsPage() {
                                         paginatedLogs.map((log) => (
                                             <TableRow key={log.id}>
                                                 <TableCell className="whitespace-nowrap text-sm text-gray-500">
-                                                    {formatDate(log.createdAt)}
+                                                    {formatDateTime(log.createdAt)}
                                                 </TableCell>
                                                 <TableCell className="text-sm font-medium text-gray-900">
                                                     {log.username}

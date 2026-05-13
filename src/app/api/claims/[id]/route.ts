@@ -214,14 +214,34 @@ export async function PUT(
     if (body.status && existing.declarationId) {
       try {
         const declRef = child(ref(db), `declarations/${existing.declarationId}`);
-        await update(declRef, { 
-          status: body.status,
-          updatedAt: new Date().toISOString(),
-          updatedBy: user.userId
-        });
+        const statusMap: Record<string, string> = {
+          "APPROVED": "APPROVED",
+          "REJECTED": "REJECTED",
+          "PAID": "PAID",
+          "UNDER_REVIEW": "UNDER_REVIEW",
+          "PENDING": "PENDING"
+        };
+        
+        const newDeclStatus = statusMap[body.status];
+        if (newDeclStatus) {
+          const declUpdates: any = { 
+            status: newDeclStatus,
+            updatedAt: new Date().toISOString(),
+            updatedBy: user.userId
+          };
+          
+          if (newDeclStatus === "APPROVED") {
+            declUpdates.approvedAt = new Date().toISOString();
+            declUpdates.approvedById = user.userId;
+          } else if (newDeclStatus === "REJECTED") {
+            declUpdates.rejectedAt = new Date().toISOString();
+            declUpdates.rejectedById = user.userId;
+          }
+
+          await update(declRef, declUpdates);
+        }
       } catch (declError) {
         console.error("Failed to sync declaration status:", declError);
-        // We don't fail the whole request if declaration sync fails, but we log it
       }
     }
 
@@ -252,7 +272,7 @@ export async function DELETE(
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== "ADMIN" && user.role !== "DIRECTOR") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!["ADMIN", "DIRECTOR", "GENERAL_MANAGER"].includes(user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const { id } = await params;
     const claimSnap = await get(child(ref(db), `claims/${id}`));

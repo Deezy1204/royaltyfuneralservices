@@ -1,4 +1,4 @@
-export type UserRole = "DIRECTOR" | "ADMIN" | "MANAGER" | "AGENT" | "ACCOUNTS" | "CLAIMS_OFFICER";
+export type UserRole = "DIRECTOR" | "ADMIN" | "MANAGER" | "AGENT" | "ACCOUNTS" | "CLAIMS_OFFICER" | "GENERAL_MANAGER";
 
 export type PolicyStatus = "PENDING" | "ACTIVE" | "LAPSED" | "CANCELLED" | "EXPIRED" | "CLAIMED";
 

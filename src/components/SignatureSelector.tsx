@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, PenTool, X, Image as ImageIcon, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SignaturePadModal } from "./SignaturePadModal";
 
 interface SignatureSelectorProps {
   onSignatureChange: (signature: string | null) => void;
@@ -16,6 +17,7 @@ interface SignatureSelectorProps {
 export function SignatureSelector({ onSignatureChange, label = "Signature" }: SignatureSelectorProps) {
   const [type, setType] = useState<"upload" | "digital">("upload");
   const [preview, setPreview] = useState<string | null>(null);
+  const [isPadOpen, setIsPadOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,16 +108,59 @@ export function SignatureSelector({ onSignatureChange, label = "Signature" }: Si
             )}
           </div>
         ) : (
-          <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-2 bg-gray-50/50 border-gray-200">
-            <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-              <PenTool className="w-5 h-5" />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-gray-600">Digital Signature Pad</p>
-              <p className="text-xs text-gray-400 italic">Signature capture will be implemented here</p>
-            </div>
+          <div className="space-y-3">
+            {!preview ? (
+              <div 
+                onClick={() => setIsPadOpen(true)}
+                className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-3 bg-blue-50/50 border-blue-200 cursor-pointer hover:bg-blue-100/50 transition-colors"
+              >
+                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <PenTool className="w-6 h-6" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-900">Digital Signature Pad</p>
+                  <p className="text-xs text-gray-500 italic">Click to open drawing pad and sign</p>
+                </div>
+                <Button size="sm" variant="outline" className="mt-2 bg-white">
+                  Sign Now
+                </Button>
+              </div>
+            ) : (
+              <div className="relative group">
+                <img 
+                  src={preview} 
+                  alt="Digital Signature" 
+                  className="max-h-24 mx-auto rounded border bg-white object-contain"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                   <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="h-8"
+                    onClick={() => setIsPadOpen(true)}
+                   >
+                     Redraw
+                   </Button>
+                </div>
+                <button 
+                  onClick={clearSignature}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
         )}
+
+        <SignaturePadModal 
+          open={isPadOpen}
+          onOpenChange={setIsPadOpen}
+          onSave={(dataUrl) => {
+            setPreview(dataUrl);
+            onSignatureChange(dataUrl);
+          }}
+        />
       </CardContent>
     </Card>
   );
